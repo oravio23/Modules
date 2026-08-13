@@ -11,6 +11,7 @@ import HubPage from "@/pages/Hub";
 import AccountPage from "@/pages/Account";
 import OrgPage from "@/pages/Org";
 import NoAccessPage from "@/pages/NoAccess";
+import NotFoundPage from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,11 @@ export default function App() {
                   <Route path="account" element={<AccountPage />} />
                   <Route path="org" element={<OrgPage />} />
                   <Route path="no-access/:moduleId" element={<NoAccessPage />} />
+                  {/* Unmatched paths still pass through ProtectedRoute first — an
+                      unauthenticated visitor to a bad URL gets sent to sign in, not a bare
+                      404; a signed-in one gets a real page with header/footer instead of the
+                      blank document a missing catch-all used to leave them on. */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Route>
             </Routes>

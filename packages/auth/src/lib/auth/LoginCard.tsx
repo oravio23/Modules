@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +16,15 @@ export function LoginCard() {
   const [email, setEmail] = React.useState("");
   const [submitting, setSubmitting] = React.useState<Submitting>("idle");
   const [sent, setSent] = React.useState(false);
+  const [params] = useSearchParams();
 
-  const redirectTo = `${window.location.origin}/auth/callback`;
+  // Forward the deep link a signed-out user was bounced from (set by ProtectedRoute) through
+  // whichever auth flow they use, so AuthCallback can send them back to it instead of
+  // defaulting to /hub. Only accept a same-app relative path, never an absolute/external URL.
+  const next = params.get("next");
+  const redirectTo = `${window.location.origin}/auth/callback${
+    next && next.startsWith("/") ? `?next=${encodeURIComponent(next)}` : ""
+  }`;
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();

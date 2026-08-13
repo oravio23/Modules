@@ -15,7 +15,14 @@ export default function LandingPage() {
   const { session, loading } = useSession();
   const [params] = useSearchParams();
 
-  if (!loading && session) {
+  // Check loading FIRST and render nothing — not the hero — while it's true. Checking
+  // `!loading && session` let a signed-in user's hard refresh paint the full login form
+  // for a tick before getSession() resolved and bounced them to /hub: a login-screen flash
+  // for someone already logged in, the exact failure ProtectedRoute's own null-while-loading
+  // pattern exists to avoid.
+  if (loading) return null;
+
+  if (session) {
     const next = params.get("next");
     return <Navigate to={next && next.startsWith("/") ? next : "/hub"} replace />;
   }

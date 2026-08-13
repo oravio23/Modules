@@ -78,6 +78,10 @@ create table platform.org_module_overrides (
 
 -- ── entitlement resolution — the security boundary every module's RLS must call ────────
 
+-- Resolves per org the user belongs to (override wins over plan grant for that org), then
+-- OR's across every org they're a member of — a user gets a module if ANY of their orgs
+-- grants it. A single arbitrary row picked via LIMIT 1 across all orgs would let one org's
+-- deny override another org's paid grant (or vice versa) for a multi-org user.
 create or replace function platform.has_module(p_user uuid, p_module text)
 returns boolean
 language sql
@@ -86,21 +90,23 @@ security definer
 set search_path = platform, public
 as $$
   select coalesce(
-    (select granted from platform.org_module_overrides omo
-       join platform.org_members m on m.org_id = omo.org_id
-      where m.user_id = p_user and omo.module_id = p_module
-      limit 1),
-    exists (
-      select 1
-        from platform.org_members m
-        join platform.org_subscriptions s on s.org_id = m.org_id
-        join platform.plan_modules pm on pm.plan_id = s.plan_id
-       where m.user_id = p_user
-         and pm.module_id = p_module
-         and s.status in ('trial', 'active')
+    bool_or(
+      coalesce(
+        omo.granted,
+        coalesce(s.status, 'none') in ('trial', 'active')
+          and exists (
+            select 1 from platform.plan_modules pm
+            where pm.plan_id = s.plan_id and pm.module_id = p_module
+          )
+      )
     ),
     false
-  );
+  )
+  from platform.org_members m
+  left join platform.org_subscriptions s on s.org_id = m.org_id
+  left join platform.org_module_overrides omo
+    on omo.org_id = m.org_id and omo.module_id = p_module
+  where m.user_id = p_user;
 $$;
 
 -- One RPC call gives the hub every module row plus this user's grant state. Deliberately
@@ -122,6 +128,23 @@ as $$
    order by m.sort_order;
 $$;
 
+-- A policy on org_members cannot subquery org_members directly in its own USING clause —
+-- Postgres reports "infinite recursion detected in policy for relation \"org_members\"".
+-- Resolving the caller's org ids through a SECURITY DEFINER function sidesteps this: the
+-- function body runs as its owner (bypassing RLS on the table it reads), so the policies
+-- below query the function instead of the protected table.
+create or replace function platform.my_org_ids()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = platform, public
+as $$
+  select org_id from platform.org_members where user_id = auth.uid();
+$$;
+
+grant execute on function platform.my_org_ids() to authenticated;
+
 -- ── RLS ──────────────────────────────────────────────────────────────────────
 
 alter table platform.orgs enable row level security;
@@ -138,20 +161,22 @@ create policy modules_read on platform.modules for select to authenticated using
 create policy plans_read on platform.plans for select to authenticated using (true);
 create policy plan_modules_read on platform.plan_modules for select to authenticated using (true);
 
--- Org-scoped tables: visible only to members of that org.
+-- Org-scoped tables: visible only to members of that org. All four go through
+-- my_org_ids() rather than querying org_members directly — org_members_read querying
+-- org_members from within its own policy is exactly the infinite-recursion case above.
 create policy orgs_member_read on platform.orgs for select to authenticated
-  using (id in (select org_id from platform.org_members where user_id = auth.uid()));
+  using (id in (select platform.my_org_ids()));
 
 create policy org_members_read on platform.org_members for select to authenticated
-  using (org_id in (select org_id from platform.org_members where user_id = auth.uid()));
+  using (org_id in (select platform.my_org_ids()));
 
 create policy org_subscriptions_read on platform.org_subscriptions for select to authenticated
-  using (org_id in (select org_id from platform.org_members where user_id = auth.uid()));
+  using (org_id in (select platform.my_org_ids()));
 
 -- Overrides are service-role write only (support/ops grants a pilot one-off manually);
 -- members can read their own org's overrides so the UI can explain a locked-vs-granted state.
 create policy org_module_overrides_read on platform.org_module_overrides for select to authenticated
-  using (org_id in (select org_id from platform.org_members where user_id = auth.uid()));
+  using (org_id in (select platform.my_org_ids()));
 
 -- ── grants — RLS is checked *after* GRANTs, so both are required ────────────────────────
 

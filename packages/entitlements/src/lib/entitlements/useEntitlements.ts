@@ -6,6 +6,21 @@ export interface EntitledModule extends ModuleDefinition {
   granted: boolean;
 }
 
+/** Raw shape of a platform.my_modules() row — Postgres/PostgREST convention is snake_case,
+ * unlike the camelCase EntitledModule the rest of the app expects. Map at this boundary,
+ * not by renaming either side. */
+interface MyModulesRow {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string;
+  personas: string[];
+  status: "live" | "beta" | "planned";
+  route: string;
+  sort_order: number;
+  granted: boolean;
+}
+
 /**
  * One RPC call resolves every module's grant state for the signed-in user. Falls back to
  * MODULES with granted:false while loading/on error, rather than an empty grid — a locked
@@ -17,7 +32,19 @@ export function useEntitlements() {
     queryFn: async (): Promise<EntitledModule[]> => {
       const { data, error } = await supabase.schema("platform").rpc("my_modules");
       if (error) throw error;
-      return (data as EntitledModule[]).sort((a, b) => a.sortOrder - b.sortOrder);
+      return (data as MyModulesRow[])
+        .map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          tagline: row.tagline,
+          personas: row.personas,
+          status: row.status,
+          route: row.route,
+          sortOrder: row.sort_order,
+          granted: row.granted,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
     },
     staleTime: 60_000,
   });
