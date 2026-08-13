@@ -1,0 +1,26 @@
+{
+  "generated_note": "Synthetic fixtures only — see scripts/generate-fixtures.ts header. No real client data.",
+  "invoices": [
+    "clean",
+    "conflicting-totals",
+    "missing-required",
+    "discount-flag",
+    "arabic-mixed"
+  ],
+  "generic": [
+    "delivery-note"
+  ],
+  "formats": [
+    "sample.txt",
+    "sample.md",
+    "sample.csv",
+    "sample.json",
+    "sample.eml",
+    "sample.png",
+    "sample.pdf",
+    "sample.docx",
+    "sample.pptx",
+    "sample.xlsx",
+    "sample.zip"
+  ]
+}

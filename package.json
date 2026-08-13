@@ -15,7 +15,11 @@
     "dev:shell": "pnpm --filter @oravio/shell dev",
     "sync": "node scripts/sync-ui.mjs --all"
   },
+  "comment": "ajv/ajv-formats/jszip are here (not just apps/m5-documents/package.json) because supabase/functions/_shared/*.test.ts run under Node from their own file location — module resolution walks up from there, and this shared code is a repo-root-level concern any module could end up depending on, not owned by one app.",
   "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "jszip": "^3.10.1",
     "typescript": "^5.6.3",
     "prettier": "^3.4.2"
   }

@@ -1,0 +1,37 @@
+{
+  "scenario_id": "conflicting-totals",
+  "description": "Same as 'clean' but the printed grand total does not reconcile with subtotal/adjustments — ARI-003 should fail and block export.",
+  "note": "Deliberately wrong grand_total. Tests ARI-003 fail + blocks_export, and that the field is still marked requires_review.",
+  "profile_id": "commercial_invoice",
+  "missing_fields": [],
+  "expected_field_values": {
+    "seller_name": "Meridian Trading Co.",
+    "buyer_name": "Kabbani Logistics Services (Fictional Test Buyer)",
+    "invoice_number": "INV-2026-0418",
+    "invoice_date": "2026-08-01",
+    "currency": "USD",
+    "incoterm": "FOB",
+    "country_of_origin": "LB",
+    "payment_terms": "Net 30",
+    "seller_vat_id": "LB123456789",
+    "bank_iban": "DE89370400440532013000",
+    "bank_swift": "COBADEFFXXX",
+    "subtotal": 80,
+    "discount": 10,
+    "freight": 15,
+    "insurance": 2,
+    "tax": 5,
+    "grand_total": 500,
+    "line_items[0].description": "Ceramic floor tiles, 60x60cm, grade A",
+    "line_items[0].quantity": 10,
+    "line_items[0].unit_price": 5,
+    "line_items[0].line_total": 50,
+    "line_items[1].description": "Adhesive mortar, 25kg bag",
+    "line_items[1].quantity": 3,
+    "line_items[1].unit_price": 10,
+    "line_items[1].line_total": 30
+  },
+  "expect_validator_outcomes": {
+    "ARI-003": "fail"
+  }
+}

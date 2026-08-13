@@ -1,0 +1,16 @@
+{
+  "scenario_id": "delivery-note",
+  "description": "Not a commercial invoice — tests that profile classification picks 'generic', not 'commercial_invoice'.",
+  "profile_id": "generic",
+  "expected_document_type_guess_contains": "delivery",
+  "expected_key_values": [
+    {
+      "label": "Delivery Note No.",
+      "value": "DN-2026-0091"
+    },
+    {
+      "label": "Date",
+      "value": "2026-08-03"
+    }
+  ]
+}

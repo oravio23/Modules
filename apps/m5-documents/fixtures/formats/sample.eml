@@ -1,0 +1,19 @@
+From: sender@example-fixture.test
+To: recipient@example-fixture.test
+Subject: Invoice INV-2026-0417
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="fixture-boundary"
+
+--fixture-boundary
+Content-Type: text/plain; charset=utf-8
+
+Please find the invoice attached. Total due: 92.00 USD.
+
+--fixture-boundary
+Content-Type: text/plain; name=note.txt
+Content-Disposition: attachment; filename=note.txt
+Content-Transfer-Encoding: base64
+
+QXR0YWNoZWQgbm90ZTogc2VlIGludm9pY2UgSU5WLTIwMjYtMDQxNy4=
+
+--fixture-boundary--

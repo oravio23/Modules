@@ -1,0 +1,21 @@
+{
+  "scenario_id": "arabic-mixed",
+  "description": "Bilingual Arabic/English invoice using Arabic-Indic numerals in the Arabic portion.",
+  "note": "No PDF fixture: a hand-rolled minimal PDF can't embed an Arabic-capable font. This scenario exercises arabic.ts normalisation and the anchoring gate directly (see supabase/functions/_shared/arabic.test.ts and validation/anchor.test.ts), and is meant to be run through the real pipeline once a genuine Arabic PDF/scan is available.",
+  "profile_id": "commercial_invoice",
+  "expected_field_values": {
+    "seller_name": "Al-Ittihad Trading Co.",
+    "buyer_name": "Kabbani Logistics Services",
+    "invoice_number": "INV-2026-0501",
+    "invoice_date": "2026-08-02",
+    "currency": "USD",
+    "subtotal": 80,
+    "grand_total": 80,
+    "line_items[0].quantity": 10,
+    "line_items[0].unit_price": 5,
+    "line_items[0].line_total": 50,
+    "line_items[1].quantity": 3,
+    "line_items[1].unit_price": 10,
+    "line_items[1].line_total": 30
+  }
+}

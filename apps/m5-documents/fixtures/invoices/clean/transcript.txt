@@ -1,0 +1,26 @@
+COMMERCIAL INVOICE
+
+Seller: Meridian Trading Co.
+Seller VAT ID: LB123456789
+Buyer: Kabbani Logistics Services (Fictional Test Buyer)
+
+Invoice No.: INV-2026-0417
+Invoice Date: 2026-08-01
+Currency: USD
+Incoterm: FOB
+Country of Origin: LB
+Payment Terms: Net 30
+
+Line Items:
+  1. Ceramic floor tiles, 60x60cm, grade A | Qty: 10 | Unit Price: 5.00 | Total: 50.00
+  2. Adhesive mortar, 25kg bag | Qty: 3 | Unit Price: 10.00 | Total: 30.00
+
+Subtotal: 80.00
+Discount: 10.00
+Freight: 15.00
+Insurance: 2.00
+Tax: 5.00
+GRAND TOTAL: 92.00
+
+Bank IBAN: DE89370400440532013000
+Bank SWIFT: COBADEFFXXX

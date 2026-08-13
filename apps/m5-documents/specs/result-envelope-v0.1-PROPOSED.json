@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oravio.internal/m5/schemas/result-envelope-v0.1-PROPOSED.json",
+  "title": "M5 Result / Evidence Envelope",
+  "description": "PROPOSED v0.1 — awaiting Phase 0 gate and Engineering Lead / Domain Reviewer sign-off. Derived from CLAUDE.md §4 and the Charter's evidence/abstention core policy in the absence of the real M5-Result-Envelope-v0.1.json (not supplied in the delivered governance package). Draft 2020-12 is a PROPOSED schema-dialect choice per ADR-014 / prior Decision D-005 — not yet ratified. Swap this file for the approved artifact when it lands; consumers read it as data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "document", "profile", "fields", "validation", "review", "usage"],
+  "$defs": {
+    "FieldStatus": {
+      "type": "string",
+      "enum": ["extracted", "missing", "uncertain", "conflicting", "not_applicable"],
+      "description": "Five-value status enum (D-004). requires_review is a SEPARATE boolean on FieldResult, never a sixth status value."
+    },
+    "AnchorState": {
+      "type": "string",
+      "enum": ["verified", "unverified", "not_applicable"],
+      "description": "'verified' means this exact quote was found, deterministically, in the stored transcript for that part. A quote that does not anchor can never mark its field's status as trustworthy."
+    },
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["part_ordinal", "quote", "anchor"],
+      "properties": {
+        "part_ordinal": { "type": "integer", "minimum": 1 },
+        "quote": { "type": "string", "minLength": 1, "description": "Verbatim substring the model claims supports this value. Must match the part's stored transcript after normalisation (whitespace, Arabic diacritics, Arabic-Indic numerals) to anchor." },
+        "char_start": { "type": ["integer", "null"], "minimum": 0 },
+        "char_end": { "type": ["integer", "null"], "minimum": 0 },
+        "anchor": { "$ref": "#/$defs/AnchorState" }
+      }
+    },
+    "ValidatorResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "outcome", "blocks_export"],
+      "properties": {
+        "id": { "type": "string", "description": "Validator catalogue ID, e.g. FMT-INV-001, ARI-002, EVD-001." },
+        "outcome": { "type": "string", "enum": ["pass", "warn", "fail", "not_applicable"] },
+        "message": { "type": ["string", "null"] },
+        "blocks_export": { "type": "boolean" }
+      }
+    },
+    "FieldResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_path", "field_label", "value", "status", "requires_review", "evidence", "validators"],
+      "properties": {
+        "field_path": { "type": "string", "minLength": 1 },
+        "field_label": { "type": "string", "minLength": 1 },
+        "value": {
+          "description": "The extracted value, in whatever JSON type is natural for the field. null when status is not 'extracted'.",
+          "type": ["string", "number", "boolean", "object", "array", "null"]
+        },
+        "status": { "$ref": "#/$defs/FieldStatus" },
+        "requires_review": {
+          "type": "boolean",
+          "description": "Always true during the pilot (100% human review policy). Also forced true whenever any evidence anchor is 'unverified' or a blocking validator fails."
+        },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" } },
+        "validators": { "type": "array", "items": { "$ref": "#/$defs/ValidatorResult" } },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": "result-envelope-v0.1-PROPOSED" },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256", "detected_mime", "part_count", "languages"],
+      "properties": {
+        "id": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "detected_mime": { "type": "string" },
+        "part_count": { "type": "integer", "minimum": 1 },
+        "languages": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "status", "confidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "status": { "type": "string", "enum": ["PROPOSED", "READY_FOR_REVIEW", "APPROVED"] },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "fields": {
+      "type": "object",
+      "description": "Map of field_path -> FieldResult. Flat, not nested — array elements use bracket-index paths, e.g. 'line_items[2].unit_price'.",
+      "additionalProperties": { "$ref": "#/$defs/FieldResult" }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["results", "summary"],
+      "properties": {
+        "results": { "type": "array", "items": { "$ref": "#/$defs/ValidatorResult" } },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pass", "warn", "fail", "not_applicable", "blocks_export"],
+          "properties": {
+            "pass": { "type": "integer", "minimum": 0 },
+            "warn": { "type": "integer", "minimum": 0 },
+            "fail": { "type": "integer", "minimum": 0 },
+            "not_applicable": { "type": "integer", "minimum": 0 },
+            "blocks_export": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "policy"],
+      "properties": {
+        "state": { "type": "string", "enum": ["pending", "in_review", "approved", "rejected"] },
+        "policy": { "const": "mandatory_human_review" }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cache_read_input_tokens": { "type": "integer", "minimum": 0 },
+        "cache_creation_input_tokens": { "type": "integer", "minimum": 0 },
+        "estimated_cost_usd": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
