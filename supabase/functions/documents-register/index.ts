@@ -13,6 +13,20 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "Method not allowed" } satisfies RegisterErrorResponse, 405);
 
+  // Top-level safety net: every other error path in this function already logs and returns
+  // a clean JSON response, but an exception thrown outside those (e.g. from the Anthropic
+  // SDK, or a Supabase client constructor call) would otherwise surface as a bare "non-2xx
+  // status code" client-side with nothing in the function logs to diagnose it by — this
+  // guarantees both a real error message and a stack trace end up in the logs.
+  try {
+    return await handleRegister(req);
+  } catch (err) {
+    console.error("documents-register: unhandled exception", err instanceof Error ? err.stack ?? err.message : String(err));
+    return json({ error: "Internal error", reason: err instanceof Error ? err.message : String(err) } satisfies RegisterErrorResponse, 500);
+  }
+});
+
+async function handleRegister(req: Request): Promise<Response> {
   const gate = await requireModule(req, "m5", CORS_HEADERS);
   if ("response" in gate) return gate.response;
   const { userId } = gate;
@@ -195,4 +209,4 @@ Deno.serve(async (req: Request) => {
     initialStage,
     partCount: body.parts.length,
   } satisfies RegisterDocumentResponse);
-});
+}
