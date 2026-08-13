@@ -11,3 +11,8 @@ create schema if not exists m5; -- Document Intelligence
 create schema if not exists m6; -- Landed Cost & Reconciliation
 
 grant usage on schema m1, m2, m3, m4, m5, m6 to authenticated;
+
+-- NOTE: service_role also needs USAGE here (plus table/sequence/function privileges and default
+-- privileges for future tables) or every edge function that touches a module schema fails with
+-- `42501 permission denied for schema m<N>` — BYPASSRLS does not imply GRANTs. That's applied in
+-- 0007_service_role_grants.sql; read its header before adding a schema of your own here.
