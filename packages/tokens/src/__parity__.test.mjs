@@ -1,9 +1,25 @@
 // Token parity check: fails loudly if tokens.css drifts from the hexes measured live off
-// oravio.co/style.css. Run via `npm test` in this package (node --experimental-strip-types,
-// no test runner dependency needed for a single assertion file).
+// oravio.co/style.css. Plain .mjs, no TypeScript/type-stripping — CI runners and colleagues'
+// machines won't all be on a Node version new enough for --experimental-strip-types, and this
+// file has no reason to depend on that. Keep this list in sync with ORAVIO_BRAND_TOKENS in
+// index.ts by hand; both independently diff against tokens.css, which is the actual guard.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { ORAVIO_BRAND_TOKENS } from "./index.ts";
+
+const ORAVIO_BRAND_TOKENS = {
+  ink: "#121938",
+  muted: "#626b7d",
+  line: "#dce2ea",
+  paper: "#f7f9fb",
+  panel: "#fff",
+  field: "#edf5f4",
+  teal: "#087c75",
+  "teal-dark": "#045f5b",
+  navy: "#111832",
+  "navy-soft": "#1c2648",
+  amber: "#b97823",
+  blue: "#2f6f9e",
+};
 
 const cssPath = fileURLToPath(new URL("./tokens.css", import.meta.url));
 const css = readFileSync(cssPath, "utf8");
