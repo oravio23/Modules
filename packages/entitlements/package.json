@@ -1,0 +1,24 @@
+{
+  "name": "@oravio/entitlements",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "comment": "Never installed by an app. Authored source vendored into every app/* by scripts/sync-ui.mjs, so every app stays a flat, standalone Vite project that can be dropped into Lovable directly (same as M5). useEntitlements.ts imports @/integrations/supabase/client from packages/auth, so this package cannot typecheck standalone by design — the real gate is `pnpm --filter @oravio/shell typecheck` (or any synced app) after sync-ui.mjs merges everything into one src/ tree.",
+  "scripts": {
+    "typecheck": "echo \"template source with cross-package imports — verified via a synced app's typecheck (e.g. apps/shell), not standalone\" && exit 0",
+    "build": "echo \"template source — nothing to build standalone, see typecheck\" && exit 0",
+    "lint": "echo \"nothing to lint\" && exit 0",
+    "test": "echo \"no tests yet\" && exit 0"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "@tanstack/react-query": "^5.62.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

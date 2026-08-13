@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/m1/:path*", "destination": "https://oravio-m1-sourcing.vercel.app/m1/:path*" },
+    { "source": "/m2/:path*", "destination": "https://oravio-m2-booking.vercel.app/m2/:path*" },
+    { "source": "/m3/:path*", "destination": "https://oravio-m3-visibility.vercel.app/m3/:path*" },
+    { "source": "/m4/:path*", "destination": "https://oravio-m4-customs.vercel.app/m4/:path*" },
+    { "source": "/m5/:path*", "destination": "https://oravio-m5-documents.vercel.app/m5/:path*" },
+    { "source": "/m6/:path*", "destination": "https://oravio-m6-landed-cost.vercel.app/m6/:path*" }
+  ]
+}

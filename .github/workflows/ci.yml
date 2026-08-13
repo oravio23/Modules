@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: No raw hex colors in module-owned code
+        # Vendored paths (components/ui, components/oravio, lib/auth, lib/entitlements,
+        # integrations/supabase) and generated files (index.css, oravio-preset.ts) are
+        # copied verbatim from packages/tokens and packages/ui by scripts/sync-ui.mjs and
+        # legitimately contain hex (e.g. Eyebrow's inverted-teal literal, the token
+        # definitions themselves) — CONTRIBUTING.md tells colleagues never to hand-edit
+        # those. This gate only needs to catch hex hardcoded in a module's OWN pages,
+        # hooks, and components.
+        run: |
+          if grep -rEn "#[0-9a-fA-F]{3,8}\b" apps/*/src --include="*.ts" --include="*.tsx" --include="*.css" 2>/dev/null \
+            | grep -v -E "^\s*//|^\s*\*" \
+            | grep -v -E "[/\\](components[/\\](ui|oravio)|lib[/\\](auth|entitlements)|integrations[/\\]supabase)[/\\]" \
+            | grep -v -E "[/\\](index\.css|oravio-preset\.ts):"; then
+            echo "::error::Raw hex color found in module-owned code. Use CSS variables (var(--navy), etc.) or Tailwind classes from oravio-preset.ts instead."
+            exit 1
+          fi
+
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - run: pnpm -r build

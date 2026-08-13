@@ -1,0 +1,21 @@
+{
+  "name": "@oravio/tokens",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "comment": "This package is never installed by an app. It is the authored source for the token/preset template vendored into every app/* by scripts/sync-ui.mjs, so every app stays a flat, dependency-free-of-monorepo Vite project that can be dropped into Lovable directly (same as M5).",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types src/__parity__.test.ts",
+    "lint": "echo \"nothing to lint\" && exit 0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.6.3"
+  }
+}

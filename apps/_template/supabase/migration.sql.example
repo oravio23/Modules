@@ -1,0 +1,40 @@
+-- Copy this into supabase/migrations/NNNN_m<N>_<slug>_init.sql at the repo root (migrations
+-- live in one shared supabase/ directory, not inside each app) and replace every m<N> with
+-- your module's real id. This is the pattern CONTRIBUTING.md's module contract requires —
+-- every table your module creates must follow it.
+
+-- Your module already owns this schema (created once in
+-- supabase/migrations/0002_module_schemas.sql) — this migration only adds tables to it.
+
+create table m<N>.example_widgets (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references platform.orgs(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table m<N>.example_widgets enable row level security;
+
+-- The has_module() check is not optional: without it, a user who loses this module's
+-- entitlement (plan downgrade, cancellation, override revoked) keeps reading this table
+-- through direct access even though the hub no longer shows the module to them at all.
+create policy example_widgets_org_scoped on m<N>.example_widgets
+  for all to authenticated
+  using (
+    org_id in (select org_id from platform.org_members where user_id = auth.uid())
+    and platform.has_module(auth.uid(), 'm<N>')
+  )
+  with check (
+    org_id in (select org_id from platform.org_members where user_id = auth.uid())
+    and platform.has_module(auth.uid(), 'm<N>')
+  );
+
+grant select, insert, update, delete on m<N>.example_widgets to authenticated;
+
+-- Register the module in the catalogue (id/name/personas/status come from
+-- supabase/migrations/0001_platform_core.sql — don't invent new copy for something
+-- oravio.co already describes). This upsert is a no-op if 0001 already inserted your row;
+-- keep it here only if you're adding a module that 0001 doesn't already seed.
+insert into platform.modules (id, slug, name, tagline, personas, status, route, sort_order)
+values ('m<N>', '<slug>', '<Name>', '<Tagline>', array['<persona>'], 'planned', '/m<N>', <N>)
+on conflict (id) do nothing;

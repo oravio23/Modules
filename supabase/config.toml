@@ -1,0 +1,41 @@
+project_id = "oravio-modules"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public", "platform", "m1", "m2", "m3", "m4", "m5", "m6"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+file_size_limit = "500MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+# Deliberately false, unlike M5's pilot: entitlements are keyed off real accounts via
+# org_members, so an anonymous session would never resolve to any module grant.
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[realtime]
+enabled = true
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
