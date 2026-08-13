@@ -42,12 +42,15 @@ policy = "oneshot"
 
 [functions.documents-register]
 verify_jwt = true
+import_map = "./functions/deno.json"
 
 [functions.pipeline-worker]
 # Invoked by documents-register and by self-invocation, always carrying the
 # service-role key as a bearer token — never called from the browser — so
 # JWT (user-session) verification is off here.
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.export-result]
 verify_jwt = true
+import_map = "./functions/deno.json"
