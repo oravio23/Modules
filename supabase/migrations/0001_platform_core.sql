@@ -40,7 +40,7 @@ create table platform.modules (
   tagline text not null,
   personas text[] not null,
   status text not null check (status in ('live', 'beta', 'planned')),
-  route text not null,                 -- '/m5'
+  route text not null,                 -- '/m5/'
   sort_order int not null
 );
 
@@ -194,22 +194,22 @@ grant execute on function platform.my_modules() to authenticated;
 insert into platform.modules (id, slug, name, tagline, personas, status, route, sort_order) values
   ('m1', 'sourcing', 'Sourcing & Supplier Management',
    'POs, supplier acknowledgements, compliance documents, and supplier scorecards before cargo moves.',
-   array['suppliers', 'importers', 'exporters'], 'planned', '/m1', 1),
+   array['suppliers', 'importers', 'exporters'], 'planned', '/m1/', 1),
   ('m2', 'booking', 'Booking & Freight Coordination',
    'Carrier booking, ETD confirmation, multi-modal coordination, and booking-to-tracking handoff.',
-   array['exporters', 'importers', 'forwarders'], 'planned', '/m2', 2),
+   array['exporters', 'importers', 'forwarders'], 'planned', '/m2/', 2),
   ('m3', 'visibility', 'Shipment Visibility',
    'Live dashboard for inbound and outbound shipments with ETAs, milestones, documents, owners, and audit trail.',
-   array['importers', 'exporters', 'suppliers'], 'live', '/m3', 3),
+   array['importers', 'exporters', 'suppliers'], 'live', '/m3/', 3),
   ('m4', 'customs', 'Customs & Clearance Agent',
    'Arabic and English HS classification, tariff context, confidence scoring, and ASYCUDA-ready output.',
-   array['customs brokers', 'importers'], 'planned', '/m4', 4),
+   array['customs brokers', 'importers'], 'planned', '/m4/', 4),
   ('m5', 'documents', 'Document Intelligence',
    'Shipping line email parsing and OCR for BLs, COOs, invoices, releases, and payment proof.',
-   array['forwarders', 'brokers', 'importers'], 'planned', '/m5', 5),
+   array['forwarders', 'brokers', 'importers'], 'planned', '/m5/', 5),
   ('m6', 'landed-cost', 'Landed Cost & Reconciliation',
    'Duty, VAT, freight, clearance, transport, and invoice variance reconciled per shipment and SKU.',
-   array['importers', 'exporters', 'finance teams'], 'planned', '/m6', 6);
+   array['importers', 'exporters', 'finance teams'], 'planned', '/m6/', 6);
 
 -- PROPOSED — packaging is a business decision, not a code one; these three starter plans
 -- exist so the entitlement model has something to test against before real pricing lands.
