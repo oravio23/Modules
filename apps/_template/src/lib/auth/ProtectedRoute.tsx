@@ -20,8 +20,15 @@ export function ProtectedRoute() {
   if (loading) return null;
 
   if (!session) {
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.assign(`/?next=${next}`);
+    // If the current URL already carries a `next` (e.g. this component re-fires on the
+    // redirect target itself — which happens in local dev, where each module runs on its
+    // own port with no shell to land on, so "/" resolves back to this same app), reuse that
+    // original value instead of re-encoding the whole current URL, which already contains
+    // it. Without this, each re-fire nests another layer of percent-encoding around the
+    // previous one, growing the URL exponentially every redirect.
+    const existingNext = new URLSearchParams(window.location.search).get("next");
+    const next = existingNext ?? window.location.pathname + window.location.search;
+    window.location.assign(`/?next=${encodeURIComponent(next)}`);
     return null;
   }
 
