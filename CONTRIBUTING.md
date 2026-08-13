@@ -84,6 +84,16 @@ supabase start                          # requires Docker; one shared local Supa
 pnpm --filter @oravio/m<N>-<slug> dev
 ```
 
+**To test SSO across the shell and your module locally**, also run `pnpm --filter @oravio/shell dev`
+and open `http://localhost:5173/m<N>/` — not your module's own port directly. `apps/shell/vite.config.ts`
+proxies `/m<N>` to your module's dev server, putting both apps on the shell's origin (`:5173`) the same
+way `vercel.json` rewrites do in production. Opening a module on its own port (e.g. `:5175`) skips that
+proxy, so the session set by logging in through the shell won't be visible there — the module will look
+broken (redirects to a blank page) even though nothing is actually wrong; that's a `localStorage`
+same-origin artifact of standalone local dev, not a bug in the module itself. Add your module's proxy
+entry (and matching `server.hmr` block, see `apps/m5-documents/vite.config.ts`) to `apps/shell/vite.config.ts`
+when you bring your module up locally.
+
 ## Before opening a PR
 
 ```bash

@@ -10,6 +10,15 @@ export default defineConfig({
   server: {
     host: true,
     port: 5175,
+    strictPort: true,
+    // In local dev this server is only ever reached through the shell's proxy at
+    // :5173/m5/* (see apps/shell/vite.config.ts) — point the HMR websocket back at
+    // that origin, or the browser (sitting at :5173) tries to open a WS to itself.
+    hmr: {
+      host: "localhost",
+      clientPort: 5173,
+      path: "/m5-hmr",
+    },
   },
   resolve: {
     alias: {
