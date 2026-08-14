@@ -3,6 +3,7 @@ import { uploadFileToAnthropic } from "../_shared/anthropic.ts";
 import { decideInitialStage } from "../_shared/pipeline/stages.ts";
 import { CORS_HEADERS } from "../_shared/auth.ts";
 import { requireModule } from "../_shared/entitlements.ts";
+import { isOrgScopedPath } from "../_shared/storage-paths.ts";
 import type { RegisterDocumentRequest, RegisterDocumentResponse, RegisterErrorResponse } from "../_shared/contracts/register.ts";
 
 function json(body: unknown, status = 200): Response {
@@ -60,6 +61,32 @@ async function handleRegister(req: Request): Promise<Response> {
     return json({ error: "Not a member of any organization" } satisfies RegisterErrorResponse, 403);
   }
   const orgId = membership.org_id as string;
+
+  // Re-validate every client-supplied Storage key against the org just resolved. The bucket
+  // policy that constrained the browser's own upload does NOT apply to the service_role
+  // reads further down (admin.storage.download of the original and of each binary part) —
+  // service_role bypasses RLS. Without this, a user entitled to m5 could post another org's
+  // key and have the server fetch that file and ship it to the Anthropic Files API. See
+  // _shared/storage-paths.ts.
+  // Only an absent path is skipped (a part with no independent binary content legitimately
+  // has none) — everything actually supplied is validated, including values that aren't
+  // strings. findIndex's -1 is used rather than find()'s undefined because an offending
+  // value can itself be falsy, which a truthiness check would wave through.
+  const suppliedPaths: unknown[] = [body.storagePath, ...body.parts.map((p) => p.storagePath)]
+    .filter((p) => p !== undefined && p !== null);
+  const foreignIndex = suppliedPaths.findIndex((p) => !isOrgScopedPath(p, orgId));
+  if (foreignIndex !== -1) {
+    // JSON.stringify, not interpolation: the path is attacker-controlled and this is the
+    // log line someone reads when investigating cross-tenant access, so an embedded newline
+    // must not be able to forge an additional record.
+    console.error(
+      `documents-register: rejected out-of-org storage path (user=${userId} org=${orgId} path=${JSON.stringify(suppliedPaths[foreignIndex])})`,
+    );
+    return json(
+      { error: "Storage path is not within your organization's folder" } satisfies RegisterErrorResponse,
+      403,
+    );
+  }
 
   // 1. Create the document row.
   const languages = new Set<string>();
