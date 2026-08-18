@@ -94,6 +94,12 @@ same-origin artifact of standalone local dev, not a bug in the module itself. Ad
 entry (and matching `server.hmr` block, see `apps/m5-documents/vite.config.ts`) to `apps/shell/vite.config.ts`
 when you bring your module up locally.
 
+**Quick demo shortcut for shell + M5 specifically:** double-click `start-hub.bat` at the repo
+root — it launches both dev servers (shell on :5173, m5-documents on :5175) in separate windows
+and opens the hub in your browser. Use `stop-hub.bat` to tear both down, including anything
+still bound to those ports outside their windows. This is a convenience wrapper around the two
+`pnpm --filter` commands above, not a replacement for understanding what they do.
+
 ## Before opening a PR
 
 ```bash
