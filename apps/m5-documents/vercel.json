@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/m5/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/m5/pdfjs/(.*)", "destination": "/pdfjs/$1" },
+    { "source": "/m5/favicon.svg", "destination": "/favicon.svg" },
+    { "source": "/m5/oravio-logo.svg", "destination": "/oravio-logo.svg" },
+    { "source": "/m5/(.*)", "destination": "/index.html" }
+  ]
+}

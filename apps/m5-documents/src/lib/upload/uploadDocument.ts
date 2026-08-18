@@ -3,7 +3,7 @@ import { detectType } from "@/lib/ingest/sniff";
 import { normalizeFileLike, IngestRejectedError } from "@/lib/ingest/normalize/index";
 import { sha256Hex } from "@/lib/hash";
 import { getCurrentOrgId } from "@/lib/org";
-import type { RegisterDocumentRequest, RegisterDocumentResponse } from "../../../../../supabase/functions/_shared/contracts/register.ts";
+import type { RegisterDocumentRequest, RegisterDocumentResponse } from "../_shared-vendor/contracts/register.ts";
 
 export type UploadPhase =
   | "reading"

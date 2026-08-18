@@ -149,8 +149,13 @@ Logged in `docs/decision-log-additions.md` in the existing register's row format
 
 ## 7. Working protocol for this repo
 
+**Stale, like the rest of this file per the banner at the top — these are the original standalone
+pilot's commands.** Actually use `pnpm --filter @oravio/m5-documents <script>` from the repo root
+(`typecheck`, `test`, `build`, `lint`), or `pnpm --filter @oravio/shell dev` alongside it per
+`CONTRIBUTING.md`. Kept below anyway since the `npm run <x>` script names themselves are unchanged.
+
 - `npm install` (also copies pdf.js worker/fonts to `public/pdfjs/` via `postinstall`)
-- `npm test` — 111 tests, no API key or network needed (schema, validators, anchoring gate, ingest
+- `npm test` — 131 tests as of the monorepo move, no API key or network needed (schema, validators, anchoring gate, ingest
   normalisers, csv/xlsx writers)
 - `npx tsc -b --noEmit` — frontend typecheck
 - `deno check --config supabase/functions/deno.json supabase/functions/*/index.ts` — edge function

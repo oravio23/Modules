@@ -56,7 +56,18 @@ project, undoing step 4 the moment someone runs it.
 
 ## 5. Edge functions
 
-`supabase/functions/_shared/` has no deployable entrypoint yet — `deno.json` there maps
-`@supabase/supabase-js` for whichever module adds the first real function
-(`supabase functions deploy <name>`). Add your function's own npm dependencies to that same
-import map as you need them, matching the pattern M5 used for `ajv`, `@anthropic-ai/sdk`, etc.
+Three functions exist today, all owned by M5: `documents-register`, `pipeline-worker`, and
+`export-result`. Deploy each with `supabase functions deploy <name>`.
+
+**`pipeline-worker` needs `--no-verify-jwt` on deploy.** `config.toml`'s
+`[functions.pipeline-worker] verify_jwt = false` is local-only and does not carry to a cloud
+deploy — pass the flag explicitly (`supabase functions deploy pipeline-worker --no-verify-jwt`),
+or every fire-and-forget call `documents-register` makes to it will fail with a 401. It's safe to
+leave unauthenticated at the network layer because it's never called by a browser, only
+server-to-server with a service-role bearer token — see
+[`documents-register/index.ts`](../supabase/functions/documents-register/index.ts)'s own call site.
+`documents-register` and `export-result` keep the default `verify_jwt = true`.
+
+`supabase/functions/deno.json` is the shared import map (`@supabase/supabase-js`, `ajv`,
+`ajv-formats`, `@anthropic-ai/sdk`, `jszip`, etc.) — add your own function's npm dependencies
+there as you need them, matching the pattern M5 already established.

@@ -36,8 +36,8 @@ export interface FileLike {
   declaredMime?: string;
 }
 
-export type { PartKind } from "../../../../../supabase/functions/_shared/parts.ts";
-import type { PartKind } from "../../../../../supabase/functions/_shared/parts.ts";
+export type { PartKind } from "../_shared-vendor/parts.ts";
+import type { PartKind } from "../_shared-vendor/parts.ts";
 
 export interface NormalizedPart {
   kind: PartKind;
