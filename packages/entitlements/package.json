@@ -3,12 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "comment": "Never installed by an app. Authored source vendored into every app/* by scripts/sync-ui.mjs, so every app stays a flat, standalone Vite project that can be dropped into Lovable directly (same as M5). useEntitlements.ts imports @/integrations/supabase/client from packages/auth, so this package cannot typecheck standalone by design — the real gate is `pnpm --filter @oravio/shell typecheck` (or any synced app) after sync-ui.mjs merges everything into one src/ tree.",
+  "comment": "Never installed by an app. Authored source vendored into every app/* by scripts/sync-ui.mjs, so every app stays a flat, standalone Vite project that can be dropped into Lovable directly (same as M5). useEntitlements.ts imports @/integrations/supabase/client from packages/auth — tsconfig.json redirects that one alias to ../auth/src/integrations/supabase/client so `typecheck` here is a real check.",
   "scripts": {
-    "typecheck": "echo \"template source with cross-package imports — verified via a synced app's typecheck (e.g. apps/shell), not standalone\" && exit 0",
-    "build": "echo \"template source — nothing to build standalone, see typecheck\" && exit 0",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
     "lint": "echo \"nothing to lint\" && exit 0",
-    "test": "echo \"no tests yet\" && exit 0"
+    "test": "node src/__parity__.test.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.47.10",

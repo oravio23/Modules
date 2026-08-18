@@ -25,7 +25,7 @@ export const MODULES: ModuleDefinition[] = [
       "POs, supplier acknowledgements, compliance documents, and supplier scorecards before cargo moves.",
     personas: ["suppliers", "importers", "exporters"],
     status: "planned",
-    route: "/m1",
+    route: "/m1/",
     sortOrder: 1,
   },
   {
@@ -35,7 +35,7 @@ export const MODULES: ModuleDefinition[] = [
     tagline: "Carrier booking, ETD confirmation, multi-modal coordination, and booking-to-tracking handoff.",
     personas: ["exporters", "importers", "forwarders"],
     status: "planned",
-    route: "/m2",
+    route: "/m2/",
     sortOrder: 2,
   },
   {
@@ -45,8 +45,8 @@ export const MODULES: ModuleDefinition[] = [
     tagline:
       "Live dashboard for inbound and outbound shipments with ETAs, milestones, documents, owners, and audit trail.",
     personas: ["importers", "exporters", "suppliers"],
-    status: "live",
-    route: "/m3",
+    status: "planned",
+    route: "/m3/",
     sortOrder: 3,
   },
   {
@@ -56,7 +56,7 @@ export const MODULES: ModuleDefinition[] = [
     tagline: "Arabic and English HS classification, tariff context, confidence scoring, and ASYCUDA-ready output.",
     personas: ["customs brokers", "importers"],
     status: "planned",
-    route: "/m4",
+    route: "/m4/",
     sortOrder: 4,
   },
   {
@@ -65,8 +65,8 @@ export const MODULES: ModuleDefinition[] = [
     name: "Document Intelligence",
     tagline: "Shipping line email parsing and OCR for BLs, COOs, invoices, releases, and payment proof.",
     personas: ["forwarders", "brokers", "importers"],
-    status: "planned",
-    route: "/m5",
+    status: "live",
+    route: "/m5/",
     sortOrder: 5,
   },
   {
@@ -76,7 +76,7 @@ export const MODULES: ModuleDefinition[] = [
     tagline: "Duty, VAT, freight, clearance, transport, and invoice variance reconciled per shipment and SKU.",
     personas: ["importers", "exporters", "finance teams"],
     status: "planned",
-    route: "/m6",
+    route: "/m6/",
     sortOrder: 6,
   },
 ];
