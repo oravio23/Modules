@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { AuthPending } from "@/components/oravio/AuthPending";
 import { useSession } from "./AuthProvider";
 
 const TIMEOUT_MS = 8000;
@@ -41,5 +42,5 @@ export function AuthCallback() {
     );
   }
 
-  return null;
+  return <AuthPending />;
 }
