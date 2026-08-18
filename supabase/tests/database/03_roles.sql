@@ -30,17 +30,30 @@ insert into platform.org_members (org_id, user_id, role) values
   ('a0000000-0000-0000-0000-000000000201'::uuid, 'b0000000-0000-0000-0000-000000000203'::uuid, 'member'),
   ('a0000000-0000-0000-0000-000000000202'::uuid, 'b0000000-0000-0000-0000-000000000204'::uuid, 'owner');
 
+-- supabase/seed.sql's dev_auto_platform_admin trigger (local dev only) auto-promotes the
+-- FIRST EVER auth.users row to staff whenever platform.platform_admins is empty — in this
+-- test's own isolated transaction, that's owner-c above. Left uncleared, is_org_admin() OR
+-- is_platform_admin() checks below would pass for the wrong reason.
+delete from platform.platform_admins
+ where user_id in (
+   'b0000000-0000-0000-0000-000000000201'::uuid, 'b0000000-0000-0000-0000-000000000202'::uuid,
+   'b0000000-0000-0000-0000-000000000203'::uuid, 'b0000000-0000-0000-0000-000000000204'::uuid
+ );
+
 -- ── act as member1 of org C (a plain member, not an admin) ──────────────────
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub":"b0000000-0000-0000-0000-000000000202","role":"authenticated"}';
 
+-- The data-modifying WITH must be at the TOP LEVEL of the statement — Postgres rejects one
+-- nested inside a subquery passed as a function argument (see 02_rls_isolation.sql's same fix).
+with attempt as (
+  update platform.org_members set role = 'admin'
+   where org_id = 'a0000000-0000-0000-0000-000000000201'::uuid
+     and user_id = 'b0000000-0000-0000-0000-000000000203'::uuid
+  returning 1
+)
 select is(
-  (with attempt as (
-     update platform.org_members set role = 'admin'
-      where org_id = 'a0000000-0000-0000-0000-000000000201'::uuid
-        and user_id = 'b0000000-0000-0000-0000-000000000203'::uuid
-     returning 1
-   ) select count(*)::int from attempt),
+  (select count(*)::int from attempt),
   0, 'a plain member cannot promote another member (not an org admin)'
 );
 

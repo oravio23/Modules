@@ -24,6 +24,14 @@ insert into platform.org_members (org_id, user_id, role) values
   ('a0000000-0000-0000-0000-000000000101'::uuid, 'b0000000-0000-0000-0000-000000000101'::uuid, 'owner'),
   ('a0000000-0000-0000-0000-000000000102'::uuid, 'b0000000-0000-0000-0000-000000000102'::uuid, 'owner');
 
+-- supabase/seed.sql's dev_auto_platform_admin trigger (local dev only) auto-promotes the
+-- FIRST EVER auth.users row to staff whenever platform.platform_admins is empty — in this
+-- test's own isolated transaction, that's user A above. Left uncleared, `is_platform_admin()`
+-- would be true for them and every "staff can see everything" RLS clause below would let
+-- them see org B too, defeating the entire point of this file.
+delete from platform.platform_admins
+ where user_id in ('b0000000-0000-0000-0000-000000000101'::uuid, 'b0000000-0000-0000-0000-000000000102'::uuid);
+
 insert into platform.org_invites (org_id, email, role, invited_by) values
   ('a0000000-0000-0000-0000-000000000102'::uuid, 'invitee@test-02.example', 'member', 'b0000000-0000-0000-0000-000000000102'::uuid);
 
@@ -70,13 +78,16 @@ select is(
 );
 
 -- and a direct update attempt against org B is rejected, not silently a no-op affecting 0 rows
--- that a caller might mistake for "nothing to update" rather than "not allowed".
+-- that a caller might mistake for "nothing to update" rather than "not allowed". The
+-- data-modifying WITH must be at the TOP LEVEL of the statement — Postgres rejects one
+-- nested inside a subquery passed as a function argument (which `select is((with ...), ...)`
+-- would be) with "WITH clause containing a data-modifying statement must be at the top level".
+with attempt as (
+  update platform.orgs set name = 'pwned' where id = 'a0000000-0000-0000-0000-000000000102'::uuid
+  returning 1
+)
 select is(
-  (with attempt as (
-     update platform.orgs set name = 'pwned' where id = 'a0000000-0000-0000-0000-000000000102'::uuid
-     returning 1
-   )
-   select count(*)::int from attempt),
+  (select count(*)::int from attempt),
   0, 'user A cannot update org B''s row (not an org admin of it)'
 );
 
