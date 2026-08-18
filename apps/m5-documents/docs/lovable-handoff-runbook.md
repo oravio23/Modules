@@ -1,9 +1,11 @@
 # Lovable Handoff Runbook
 
 **Status:** the code-level fixes below (§1) have been applied directly to this repo and verified —
-`npm test` (111 tests), `npx tsc -b --noEmit`, and `npm run build` all pass clean as of this revision.
-The infrastructure steps (§2–5) have not been run — they require an actual Supabase Cloud project and a
-Lovable import to execute, which is for whoever runs the migration to do. See
+`pnpm --filter @oravio/m5-documents test` (131 tests), `typecheck`, and `build` all pass clean as of
+this revision, **and** §1c's fix was verified the way that matters: copying `apps/m5-documents` to a
+directory outside the monorepo and running `npm install && npm run build` there directly, not just
+reading the code. The infrastructure steps (§2–5) have not been run — they require an actual Supabase
+Cloud project and a Lovable import to execute, which is for whoever runs the migration to do. See
 [docs/lovable-import-prompt.md](lovable-import-prompt.md) for a paste-ready prompt covering §2–4 once
 you're inside Lovable.
 
@@ -83,12 +85,31 @@ as "Couldn't render page" in [PartViewer.tsx](../src/components/review/PartViewe
 on Lovable, sanity check: `curl -I https://<your-domain>/pdfjs/pdf.worker.min.mjs` should return a JS
 content-type, not `text/html` (an HTML response means the asset 404'd and got SPA-fallback-routed).
 
-### 1c. Cross-boundary type-only import — checked, fine, no change needed
-`src/lib/upload/uploadDocument.ts` imports `RegisterDocumentRequest`/`RegisterDocumentResponse` from
-`../../../supabase/functions/_shared/contracts/register.ts`. This looked risky at first glance (frontend
-reaching into the Edge Functions directory), but it's an `import type` — erased entirely at build time by
-esbuild/Vite, never resolved at runtime. Confirmed directly: `npx tsc -b --noEmit` on this exact repo
-passes clean with this import in place. No action needed.
+### 1c. Cross-boundary imports — this conclusion was wrong, now fixed
+This section originally checked one `import type` (from `uploadDocument.ts`) inside the pre-monorepo
+standalone repo, found it erased at build time, and concluded "no action needed." That check was
+incomplete in two ways once this app moved into the monorepo, both confirmed by actually copying
+`apps/m5-documents` out to its own directory and running `npm install && npm run build` there (not just
+reading the code, which is what missed this the first time):
+
+1. **Two imports are runtime, not type-only** — `src/lib/arabic.ts` (`export *`) and
+   `src/lib/profiles/registry.ts` (`import { ALL_PROFILES }`) — and both resolved only because the
+   monorepo root happened to sit a fixed number of directories above this app. Copy the app out and
+   Rollup fails immediately: there is no `supabase/` at that relative path any more.
+2. **Three more are `import type`, but `tsc -b` still fails on them anyway.** Type-only imports are
+   erased by esbuild/Vite at bundle time, but `tsc -b` — which this app's own `build` script runs
+   *before* `vite build` — still resolves every import to check it, type-only or not. `src/lib/ingest/types.ts`,
+   `src/lib/profiles/types.ts`, and `src/lib/upload/uploadDocument.ts` all reach across the same way and
+   all failed `tsc -b` once copied out, even though `vite build` alone would have been fine with them.
+
+**Fixed:** all five now import from `src/lib/_shared-vendor/`, a real (not re-exported) copy of the
+subset of `supabase/functions/_shared/` this app needs at build time, produced by
+[`scripts/vendor-shared.mjs`](../scripts/vendor-shared.mjs). That script runs on `postinstall` and is
+prefixed onto `build`, and degrades to a no-op with a log line if `supabase/functions/_shared` doesn't
+exist (i.e. running outside the monorepo) — the vendored copy is committed to git, not gitignored,
+specifically so the build doesn't depend on the monorepo being present to succeed. Re-run it after
+editing anything in `supabase/functions/_shared/{arabic.ts,envelope-types.ts,parts.ts,profiles/*,pipeline/stages.ts,contracts/register.ts}`
+from inside the monorepo, the same way `scripts/sync-ui.mjs` works for `packages/ui`/`packages/tokens`.
 
 ---
 
@@ -101,48 +122,24 @@ supabase login
 supabase link --project-ref <your-project-ref>
 ```
 
-### 2b. Push migrations — `profiles` seeding fixed, still push it
-[supabase/migrations/0001_init.sql:153](../supabase/migrations/0001_init.sql) declares
-`extractions.profile_id` as `not null references profiles(id)`. The only place that table used to get
-populated was [supabase/seed.sql](../supabase/seed.sql) (confirmed by grepping the whole repo for any
-other writer of `profiles` — there was none), and `supabase db push` **does not run `seed.sql` against a
-cloud project** — seeding only happens automatically for local `supabase start`/`db reset`. Left as it
-was, every document upload would have transcribed and classified successfully (spending real Anthropic
-tokens), then died on the `extractions` insert with a foreign-key violation.
+### 2b–2d. Superseded — this whole section described the pre-monorepo pilot
+Everything that used to live here (push `0001_init.sql`/`0003_seed_profiles.sql`, enable anonymous
+sign-ins because there's no login flow, confirm the Storage bucket and Realtime publication) described
+the standalone M5 pilot from before this app moved into the monorepo. None of it is accurate any more:
 
-**Fixed:** [scripts/generate-seed.ts](../scripts/generate-seed.ts) now writes the identical content to
-both `supabase/seed.sql` (local) and `supabase/migrations/0003_seed_profiles.sql` (cloud), so `db push`
-carries it. This stays correct automatically — whenever a profile changes and someone runs `npm run
-specs`, the migration regenerates along with the seed file, rather than needing a second manual step that
-would silently drift out of sync. Still push it explicitly for the actual migration:
-```bash
-supabase db push
-```
+- Migrations are now `0001_platform_core.sql` through `0008_org_auto_provisioning.sql` (nine files, not
+  three), and the table this app seeds is schema-qualified `m5.profiles`, not bare `profiles`.
+- **Anonymous sign-ins must stay OFF.** This app now sits behind real SSO (magic link, Google,
+  Microsoft) provided by `apps/shell` — enabling anonymous sign-ins would be a regression, not a fix,
+  and contradicts [`docs/deploy-checklist.md`](../../../docs/deploy-checklist.md)'s explicit rule.
+- The Storage bucket, its RLS policy, and the Realtime publication (now `m5.jobs` **and**
+  `m5.documents`, not just `jobs`) are still defined in SQL — in `0003_m5_documents.sql` — just under
+  the new schema-qualified names.
 
-### 2c. Enable anonymous sign-ins — off by default on a fresh cloud project
-The app has **no login flow at all**: `ensureAnonymousSession()` in
-[src/integrations/supabase/client.ts](../src/integrations/supabase/client.ts) is the *only* auth call in
-the entire `src/` tree, called as the first statement of every upload
-([uploadDocument.ts:28](../src/lib/upload/uploadDocument.ts)), and there is no `/login` route anywhere in
-[src/App.tsx](../src/App.tsx). `enable_anonymous_sign_ins = true` in
-[supabase/config.toml](../supabase/config.toml) is **local-stack-only config** — it does not carry over to
-a cloud project, which defaults this off. Every RLS policy in the schema is scoped `to authenticated`, so
-without this, there is no way to get a session and nothing works: uploads throw immediately, the Queue
-page renders "Couldn't reach the backend" (a real, visible error — not a blank screen — but with copy that
-wrongly suggests running `supabase start`, which is misleading advice on cloud).
-
-**Fix:** Dashboard → Authentication → Sign In / Providers → enable "Allow anonymous sign-ins", **before**
-the first smoke test. (Don't reach for `supabase config push` as a shortcut here — it would also push
-`site_url = "http://localhost:8080"` and other local-only `[auth]`/`[storage]` values from `config.toml`
-that you don't want on a cloud project.)
-
-### 2d. Storage bucket + Realtime — confirm these exist post-push
-Verify the `documents` Storage bucket and its RLS policies, and the Realtime publication used by
-[src/hooks/useJobProgress.ts](../src/hooks/useJobProgress.ts) for live pipeline-progress updates, are
-actually defined in `0001_init.sql` (not only assumed by local defaults). If either turns out to only be
-implicit in the local stack's config rather than in SQL, it needs to be created manually on the cloud
-project — check this explicitly rather than assuming `db push` covers it, since this is exactly the kind
-of thing that fails silently (progress just never updates; uploads to a missing bucket 404).
+The corrected, current version of every step in this section — which migrations to push, in what order,
+and exactly what to enable/confirm in the dashboard — now lives in one place instead of two that could
+drift apart again: [docs/lovable-import-prompt.md](lovable-import-prompt.md), steps 1–5 and 9. Follow
+that instead of anything that used to be written here.
 
 ---
 
@@ -150,9 +147,14 @@ of thing that fails silently (progress just never updates; uploads to a missing 
 
 ```bash
 supabase functions deploy documents-register
-supabase functions deploy pipeline-worker
+supabase functions deploy pipeline-worker --no-verify-jwt
 supabase functions deploy export-result
 ```
+
+`pipeline-worker` needs `--no-verify-jwt` — `config.toml`'s `verify_jwt = false` for it is local-only
+and does not carry to a cloud deploy. Without the flag, `documents-register`'s fire-and-forget call to
+it (a service-role bearer token, never a user session) gets rejected with a 401 before the pipeline ever
+starts. `documents-register` and `export-result` keep the default JWT verification.
 
 ### 3a. Hosted execution-time limits — already designed for, not a fresh risk
 This was the biggest concern going in (a ~40s local pipeline run against hosted Edge Function wall-clock

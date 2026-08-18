@@ -41,7 +41,7 @@ time someone else syncs and overwrites your app's copy.
 
    ```sql
    using (
-     org_id in (select org_id from platform.org_members where user_id = auth.uid())
+     org_id in (select platform.my_org_ids())
      and platform.has_module(auth.uid(), 'm<N>')
    )
    ```
@@ -84,6 +84,14 @@ supabase start                          # requires Docker; one shared local Supa
 pnpm --filter @oravio/m<N>-<slug> dev
 ```
 
+**Getting your first org.** Sign up once through the shell (magic link or Google/Microsoft) —
+`platform.handle_new_user()` (see `supabase/migrations/0008_org_auto_provisioning.sql`) creates
+an org and adds you as its owner automatically on signup, and `supabase/seed.sql`'s
+dev-only trigger immediately subscribes that org to the `full` plan, so your hub is fully
+unlocked with no manual SQL. That auto-subscribe step is local-only — `supabase db push` never
+runs `seed.sql` against a cloud project, so a real signup there gets an org with zero
+entitlements until someone deliberately grants a plan or override, same as any other customer.
+
 **To test SSO across the shell and your module locally**, also run `pnpm --filter @oravio/shell dev`
 and open `http://localhost:5173/m<N>/` — not your module's own port directly. `apps/shell/vite.config.ts`
 proxies `/m<N>` to your module's dev server, putting both apps on the shell's origin (`:5173`) the same
@@ -100,15 +108,20 @@ and opens the hub in your browser. Use `stop-hub.bat` to tear both down, includi
 still bound to those ports outside their windows. This is a convenience wrapper around the two
 `pnpm --filter` commands above, not a replacement for understanding what they do.
 
+**For day-to-day development**, `pnpm dev` at the repo root runs both servers in one terminal
+(via `concurrently`, output prefixed `shell`/`m5`) instead of two separate windows — more
+convenient once you're actually working in the code rather than just demoing it.
+
 ## Before opening a PR
 
 ```bash
 pnpm -r typecheck
 pnpm -r test
 pnpm -r build
+pnpm -r lint
 ```
 
-CI runs the same three commands plus the raw-hex grep gate. All four must pass.
+CI runs the same four commands plus the raw-hex grep gate. All five must pass.
 
 ## Deploy model
 

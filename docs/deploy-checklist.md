@@ -32,15 +32,30 @@ an org, so it can never be granted a module. `config.toml`'s
 defaults this off, but confirm rather than assume (Dashboard → Authentication → Sign In /
 Providers).
 
-## 3. Configure Google and Microsoft OAuth for real
+## 3. Configure Google and Microsoft OAuth for real (optional — off by default)
 
-`LoginCard` (see
-[packages/auth/src/lib/auth/LoginCard.tsx](../packages/auth/src/lib/auth/LoginCard.tsx)) calls
-`supabase.auth.signInWithOAuth({ provider: "google" | "azure", ... })`. Neither provider is
-configured by `config.toml` — that's dashboard-only, per-project: Dashboard → Authentication →
-Providers → enable Google and enable Azure (Microsoft), each with a real OAuth client
-ID/secret from that provider's own console. Until this is done, both OAuth buttons on the
-landing page fail with a provider-not-enabled error from Supabase.
+`AuthCard` (see
+[packages/auth/src/lib/auth/AuthCard.tsx](../packages/auth/src/lib/auth/AuthCard.tsx)) calls
+`supabase.auth.signInWithOAuth({ provider: "google" | "azure", ... })`, but the buttons only
+render when `VITE_ENABLE_OAUTH="true"` — leave that unset until both providers are actually
+configured. Neither is configured by `config.toml` — that's dashboard-only, per-project:
+Dashboard → Authentication → Providers → enable Google and enable Azure (Microsoft), each
+with a real OAuth client ID/secret from that provider's own console. Only set
+`VITE_ENABLE_OAUTH=true` and redeploy the shell once both are live; email+password and magic
+link work regardless.
+
+## 3a. Email/password: confirmations, password policy, leaked-password protection
+
+`config.toml`'s `[auth.email] enable_confirmations = true` is local-only. On the cloud
+project: Dashboard → Authentication → Providers → Email → require email confirmations. This
+is not optional once `enable_signup = true` and password signups exist — without it, anyone
+can claim an unverified address (e.g. `ceo@customer.com`), have `platform.provision_user()`
+give them a personal org, and become its owner before the real person ever signs up.
+
+Also in that dashboard section: set a minimum password length (config.toml sets 8 locally;
+mirror it) and turn on "leaked password protection" (HaveIBeenPwned check) — both are
+dashboard-only settings with no `config.toml` equivalent, so `supabase start` can't verify
+them for you.
 
 ## 4. Update `site_url` and redirect URLs for the real domain
 
@@ -56,7 +71,41 @@ project, undoing step 4 the moment someone runs it.
 
 ## 5. Edge functions
 
-`supabase/functions/_shared/` has no deployable entrypoint yet — `deno.json` there maps
-`@supabase/supabase-js` for whichever module adds the first real function
-(`supabase functions deploy <name>`). Add your function's own npm dependencies to that same
-import map as you need them, matching the pattern M5 used for `ajv`, `@anthropic-ai/sdk`, etc.
+Five functions exist today: M5's `documents-register`, `pipeline-worker`, and
+`export-result`, plus the platform's `admin-api` (staff console) and `org-invite` (org
+admins). Deploy each with `supabase functions deploy <name>`.
+
+**`pipeline-worker` needs `--no-verify-jwt` on deploy.** `config.toml`'s
+`[functions.pipeline-worker] verify_jwt = false` is local-only and does not carry to a cloud
+deploy — pass the flag explicitly (`supabase functions deploy pipeline-worker --no-verify-jwt`),
+or every fire-and-forget call `documents-register` makes to it will fail with a 401. It's safe to
+leave unauthenticated at the GATEWAY layer because it's never called by a browser, only
+server-to-server — but the function's own code now also checks a shared secret (next item);
+gateway-level `verify_jwt` and that in-function check are two separate layers, and both are
+needed. `documents-register` and `export-result` keep the default `verify_jwt = true`.
+
+**Set `PIPELINE_WORKER_SECRET` before deploying `pipeline-worker` or `documents-register`.**
+`supabase/functions/_shared/pipelineAuth.ts` is `pipeline-worker`'s real auth gate — without
+it, anyone who discovers a job UUID could POST it to the function's public URL and spend
+Anthropic tokens on Oravio's account. Set with:
+```
+supabase secrets set PIPELINE_WORKER_SECRET=$(openssl rand -hex 32)
+```
+Locally, `supabase start` reads it from `supabase/.env` (gitignored) or your shell
+environment — see `apps/m5-documents/.env.example` for the local dev placeholder.
+
+`supabase/functions/deno.json` is the shared import map (`@supabase/supabase-js`, `ajv`,
+`ajv-formats`, `@anthropic-ai/sdk`, `jszip`, etc.) — add your own function's npm dependencies
+there as you need them, matching the pattern M5 already established.
+
+## 6. Seed the first platform admin
+
+Nothing in the app can create a `platform.platform_admins` row — that's deliberate (see
+`0011_platform_admins.sql`'s header comment). After migrations are applied to the cloud
+project, run once in the SQL editor:
+```sql
+insert into platform.platform_admins (user_id, note)
+select id, 'founder' from auth.users where email = 'jad.assaf@oravio.co';
+```
+That account can then use the `/admin` staff console to add further staff the same way, or
+assign plans/modules to customer orgs.

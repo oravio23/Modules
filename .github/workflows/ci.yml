@@ -42,3 +42,19 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r test
       - run: pnpm -r build
+      - run: pnpm -r lint
+
+  db:
+    runs-on: ubuntu-latest
+    # RLS is the actual security boundary for this platform (see 0001_platform_core.sql's
+    # own header comment) — this job is what actually exercises it, via pgTAP
+    # (supabase/tests/database/*.sql), against a real local Postgres+Auth stack the
+    # Supabase CLI spins up, not just the plpgsql function bodies checked in isolation.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase start
+      - run: supabase db reset
+      - run: supabase test db

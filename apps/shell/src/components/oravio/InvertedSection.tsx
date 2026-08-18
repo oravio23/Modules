@@ -8,7 +8,7 @@ const InvertedSection = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLE
       ref={ref}
       className={cn(
         "bg-[var(--navy)] px-[clamp(18px,4vw,56px)] py-[78px] text-white",
-        "[&_h2]:text-white [&_.eyebrow]:text-[#63cbc4]",
+        "[&_h2]:text-white [&_.eyebrow]:text-[var(--teal-bright)]",
         className,
       )}
       {...props}

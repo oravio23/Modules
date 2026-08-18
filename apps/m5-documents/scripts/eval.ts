@@ -21,13 +21,13 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { classifyDocument } from "../supabase/functions/_shared/pipeline/classify.ts";
-import { extractFields } from "../supabase/functions/_shared/pipeline/extract.ts";
-import { anchorFields, hasVerifiedEvidence } from "../supabase/functions/_shared/validation/anchor.ts";
-import { buildEnvelope } from "../supabase/functions/_shared/envelope.ts";
-import { ALL_PROFILES, PROFILES_BY_ID, expandCriticalFieldPaths, expandRequiredFieldPaths } from "../supabase/functions/_shared/profiles/index.ts";
-import { addUsage, computeCostUsd, emptyUsageTotals } from "../supabase/functions/_shared/anthropic.ts";
-import type { PartTranscript } from "../supabase/functions/_shared/envelope-types.ts";
+import { classifyDocument } from "../../../supabase/functions/_shared/pipeline/classify.ts";
+import { extractFields } from "../../../supabase/functions/_shared/pipeline/extract.ts";
+import { anchorFields, hasVerifiedEvidence } from "../../../supabase/functions/_shared/validation/anchor.ts";
+import { buildEnvelope } from "../../../supabase/functions/_shared/envelope.ts";
+import { ALL_PROFILES, PROFILES_BY_ID, expandCriticalFieldPaths, expandRequiredFieldPaths } from "../../../supabase/functions/_shared/profiles/index.ts";
+import { addUsage, computeCostUsd, emptyUsageTotals } from "../../../supabase/functions/_shared/anthropic.ts";
+import type { PartTranscript } from "../../../supabase/functions/_shared/envelope-types.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");

@@ -4,6 +4,9 @@
     "composite": false,
     "baseUrl": ".",
     "paths": {
+      "@/components/ui/*": ["../ui/src/primitives/*"],
+      "@/components/oravio/*": ["../ui/src/oravio/*"],
+      "@/lib/utils": ["../ui/src/lib/utils"],
       "@/*": ["./src/*"]
     },
     "types": ["vite/client"]

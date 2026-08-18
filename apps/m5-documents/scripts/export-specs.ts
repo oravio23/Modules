@@ -10,9 +10,9 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { ALL_PROFILES, expandRepeatingFieldPaths } from "../supabase/functions/_shared/profiles/index.ts";
-import { ALL_VALIDATORS } from "../supabase/functions/_shared/validation/index.ts";
-import type { DocumentProfileDefinition, ProfileFieldDefinition } from "../supabase/functions/_shared/profiles/types.ts";
+import { ALL_PROFILES, expandRepeatingFieldPaths } from "../../../supabase/functions/_shared/profiles/index.ts";
+import { ALL_VALIDATORS } from "../../../supabase/functions/_shared/validation/index.ts";
+import type { DocumentProfileDefinition, ProfileFieldDefinition } from "../../../supabase/functions/_shared/profiles/types.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");

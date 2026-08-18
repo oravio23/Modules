@@ -47,11 +47,55 @@
   --input: var(--line);
   --ring: var(--teal);
   --radius: 6px;
+  --radius-lg: 14px; /* oravio.co's card radius (Trade Command Center panel, module tiles) */
 
-  /* No dark mode: oravio.co ships light-only, so the platform stays light-only too. */
+  /*
+   * The dark "operations portal" chrome used after sign-in (Hub and everything behind
+   * ProtectedRoute) — landing and sign-in stay on the light tokens above, matching
+   * oravio.co. Not a dark-mode toggle: there is exactly one dark surface, applied
+   * deliberately via these variables, never via a `prefers-color-scheme` media query.
+   */
+  --app-bg: var(--navy);
+  --app-surface: var(--navy-soft);
+  --app-surface-2: #223058; /* one step up from --navy-soft, for a raised card on a raised card */
+  --app-line: rgba(255, 255, 255, 0.12);
+  --app-text: #ffffff;
+  --app-text-muted: #a7b0c4;
+  --app-bg-translucent: rgba(17, 24, 50, 0.85); /* --navy, for the sticky header's backdrop-blur panel */
 
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  /* The on-navy accent InvertedSection already hardcoded (#63cbc4) — promoted to a token so
+     the dark portal chrome can reuse it instead of a second hardcoded hex living elsewhere. */
+  --teal-bright: #63cbc4;
+
+  /* Elevation, measured directly off oravio.co's own card and Trade Command Center shadows. */
+  --shadow-sm: 0 8px 24px rgba(17, 24, 50, 0.12);
+  --shadow-md: 0 28px 80px rgba(17, 24, 50, 0.16);
+  --shadow-lg: 0 24px 64px rgba(17, 24, 50, 0.4);
+
+  /* One motion vocabulary so every module's animation feels like the same product. */
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /*
+   * oravio.co's clamp() display type scale — was hardcoded inline inside
+   * DisplayHeading.tsx; moved here so it's a token like everything else and any app can
+   * reference it directly.
+   */
+  --text-h1-size: clamp(62px, 8vw, 118px);
+  --text-h1-leading: 0.88;
+  --text-h2-size: clamp(30px, 4vw, 52px);
+  --text-h2-leading: 1.02;
+  --text-h3-size: 21px;
+  --text-h3-leading: 1.15;
+
+  /* No light/dark *toggle*: oravio.co ships light-only, and the dark app chrome above is a
+     deliberate second surface, not a `prefers-color-scheme` response. */
+
+  --font-sans: "Inter Variable", Arial, Helvetica, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   --font-arabic: "Noto Naskh Arabic", "Noto Sans Arabic", Tahoma, "Segoe UI", sans-serif;
 
   --container: 1180px;

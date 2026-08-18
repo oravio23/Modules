@@ -18,14 +18,22 @@ alter table m<N>.example_widgets enable row level security;
 -- The has_module() check is not optional: without it, a user who loses this module's
 -- entitlement (plan downgrade, cancellation, override revoked) keeps reading this table
 -- through direct access even though the hub no longer shows the module to them at all.
+--
+-- Use platform.my_org_ids() to resolve the caller's orgs, not a direct
+-- `select org_id from platform.org_members where user_id = auth.uid()` subquery — that form
+-- is exactly what triggers "infinite recursion detected in policy for relation
+-- \"org_members\"" the one place it actually matters (a policy ON org_members itself; see
+-- supabase/migrations/0001_platform_core.sql's own comment on this). It's harmless on a
+-- different table like this one, but every other policy in this repo goes through
+-- my_org_ids() — stay consistent so nobody copies this file into the one place it would bite.
 create policy example_widgets_org_scoped on m<N>.example_widgets
   for all to authenticated
   using (
-    org_id in (select org_id from platform.org_members where user_id = auth.uid())
+    org_id in (select platform.my_org_ids())
     and platform.has_module(auth.uid(), 'm<N>')
   )
   with check (
-    org_id in (select org_id from platform.org_members where user_id = auth.uid())
+    org_id in (select platform.my_org_ids())
     and platform.has_module(auth.uid(), 'm<N>')
   );
 
@@ -36,5 +44,5 @@ grant select, insert, update, delete on m<N>.example_widgets to authenticated;
 -- oravio.co already describes). This upsert is a no-op if 0001 already inserted your row;
 -- keep it here only if you're adding a module that 0001 doesn't already seed.
 insert into platform.modules (id, slug, name, tagline, personas, status, route, sort_order)
-values ('m<N>', '<slug>', '<Name>', '<Tagline>', array['<persona>'], 'planned', '/m<N>', <N>)
+values ('m<N>', '<slug>', '<Name>', '<Tagline>', array['<persona>'], 'planned', '/m<N>/', <N>)
 on conflict (id) do nothing;
