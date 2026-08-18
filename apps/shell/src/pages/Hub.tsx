@@ -1,5 +1,6 @@
+import * as React from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HairlineGrid } from "@/components/oravio/HairlineGrid";
 import { ModuleCard } from "@/components/oravio/ModuleCard";
 import { Eyebrow } from "@/components/oravio/Eyebrow";
@@ -36,10 +37,36 @@ function useMyOrgName() {
   });
 }
 
+/**
+ * Redeems any pending org invite for the signed-in user's email on every hub load. Covers
+ * the case a trigger can't: someone invited AFTER they already have an account (and
+ * therefore already belong to at least one org) never fires
+ * platform.handle_new_user/handle_user_confirmed again, since those only run on signup/
+ * confirmation — this is the fallback that picks up the invite on their next visit instead
+ * of requiring a manual step. Fire-and-forget: a failure here just means they see the
+ * invite acted on next time instead, not a broken hub load.
+ */
+function useRedeemPendingInvites() {
+  const queryClient = useQueryClient();
+  React.useEffect(() => {
+    supabase
+      .schema("platform")
+      .rpc("redeem_my_invites")
+      .then(({ error }) => {
+        if (error) {
+          console.error("redeem_my_invites failed", error);
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: ["platform"] });
+      });
+  }, [queryClient]);
+}
+
 export default function HubPage() {
   const { modules, isLoading, isError } = useEntitlements();
   const { data: orgName } = useMyOrgName();
   const motionSafe = useMotionSafe();
+  useRedeemPendingInvites();
 
   const grantedCount = modules.filter((m) => m.granted).length;
   const liveCount = modules.filter((m) => m.granted && m.status === "live").length;

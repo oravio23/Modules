@@ -4,6 +4,8 @@ import { decideInitialStage } from "../_shared/pipeline/stages.ts";
 import { CORS_HEADERS } from "../_shared/auth.ts";
 import { requireModule } from "../_shared/entitlements.ts";
 import { isOrgScopedPath } from "../_shared/storage-paths.ts";
+import { pipelineAuthHeaders } from "../_shared/pipelineAuth.ts";
+import { waitUntil } from "../_shared/edgeRuntime.ts";
 import type { RegisterDocumentRequest, RegisterDocumentResponse, RegisterErrorResponse } from "../_shared/contracts/register.ts";
 
 function json(body: unknown, status = 200): Response {
@@ -220,15 +222,25 @@ async function handleRegister(req: Request): Promise<Response> {
   // 6. Kick off the pipeline worker. Fire-and-forget: the browser gets an
   // immediate response and follows progress via Realtime on the jobs row,
   // it does not wait on the (potentially many-stage) pipeline run.
+  //
+  // Wrapped in EdgeRuntime.waitUntil(): under config.toml's `policy = "oneshot"`, the edge
+  // runtime can tear down this invocation's isolate as soon as the response below is sent,
+  // which can cancel an in-flight, un-awaited fetch() before it ever reaches pipeline-worker
+  // — the document would then sit at status 'queued' forever with nothing to retry it. This
+  // is documented in docs/hub-v1-contract-audit.md §11 item 6. waitUntil() keeps the
+  // isolate alive until the promise settles, without making the CALLER (the browser) wait
+  // for it — the response above is already on its way back.
   const workerUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/pipeline-worker`;
-  fetch(workerUrl, {
+  const invokeWorker = fetch(workerUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      ...pipelineAuthHeaders(),
     },
     body: JSON.stringify({ jobId: job.id }),
   }).catch((err) => console.error("Failed to invoke pipeline-worker", err));
+  waitUntil(invokeWorker);
 
   return json({
     documentId,

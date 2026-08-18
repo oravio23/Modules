@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/lib/auth/AuthProvider";
 import { signOut } from "@/lib/auth/signOut";
+import { useIsPlatformAdmin } from "@/lib/auth/useIsPlatformAdmin";
 import { CommandMenu } from "./CommandMenu";
 
 /**
@@ -25,6 +26,7 @@ export function SiteHeader() {
   const user = useUser();
   const navigate = useNavigate();
   const [commandOpen, setCommandOpen] = React.useState(false);
+  const { isStaff } = useIsPlatformAdmin();
 
   const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 
@@ -81,6 +83,11 @@ export function SiteHeader() {
                 <DropdownMenuItem asChild>
                   <Link to="/org">Organization</Link>
                 </DropdownMenuItem>
+                {isStaff && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">Staff console</Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />

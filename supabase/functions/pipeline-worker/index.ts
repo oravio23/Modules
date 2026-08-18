@@ -1,4 +1,5 @@
 import { createSupabaseAdmin } from "../_shared/supabaseAdmin.ts";
+import { pipelineAuthHeaders, requirePipelineSecret } from "../_shared/pipelineAuth.ts";
 import { addUsage, computeCostUsd, emptyUsageTotals, type UsageTotals } from "../_shared/anthropic.ts";
 import { transcribeBatch, type TranscribeTarget } from "../_shared/pipeline/transcribe.ts";
 import { classifyDocument } from "../_shared/pipeline/classify.ts";
@@ -25,13 +26,24 @@ async function reinvokeSelf(jobId: string) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/pipeline-worker`;
   await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      ...pipelineAuthHeaders(),
+    },
     body: JSON.stringify({ jobId }),
   }).catch((err) => console.error("pipeline-worker self-invoke failed", err));
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  // The actual auth gate — see _shared/pipelineAuth.ts. verify_jwt=false in config.toml
+  // only skips the platform gateway's JWT check (this function is never called with a
+  // user session); without this, anyone with a job UUID could invoke the pipeline and
+  // spend Anthropic tokens on Oravio's account.
+  const authFailure = requirePipelineSecret(req, CORS_HEADERS);
+  if (authFailure) return authFailure;
 
   const startedAt = Date.now();
   const { jobId } = (await req.json().catch(() => ({}))) as { jobId?: string };

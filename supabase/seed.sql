@@ -30,6 +30,34 @@ create trigger dev_auto_subscribe_on_org_created
   after insert on platform.orgs
   for each row execute function platform.dev_auto_subscribe();
 
+-- The ONLY path that ever creates a platform.platform_admins row on a real project is a
+-- by-hand service-role INSERT from the SQL editor (see 0011's header comment) — nothing in
+-- the app can promote anyone. That is deliberately still true here: this trigger does not
+-- run in production. It exists purely so a fresh `supabase db reset` leaves the staff
+-- console (/admin) reachable without a manual SQL step every time a local Postgres is
+-- recreated. Only the very FIRST user ever created locally becomes staff; every signup
+-- after that gets ordinary access, so multi-user flows (invites, role enforcement) can
+-- still be exercised locally with non-staff accounts.
+create or replace function platform.dev_auto_platform_admin()
+returns trigger
+language plpgsql
+security definer
+set search_path = platform, public
+as $$
+begin
+  if not exists (select 1 from platform.platform_admins) then
+    insert into platform.platform_admins (user_id, note)
+    values (new.id, 'local dev — first user, auto-added by supabase/seed.sql');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists dev_auto_platform_admin_on_user_created on auth.users;
+create trigger dev_auto_platform_admin_on_user_created
+  after insert on auth.users
+  for each row execute function platform.dev_auto_platform_admin();
+
 -- BEGIN GENERATED M5 PROFILES (do not hand-edit this section — see generate-seed.ts)
 -- Regenerate with: npx tsx apps/m5-documents/scripts/generate-seed.ts
 -- Source of truth: supabase/functions/_shared/profiles/*.ts
