@@ -10,8 +10,11 @@ select plan(7);
 
 insert into platform.orgs (id, name, slug) values
   ('a0000000-0000-0000-0000-000000000401'::uuid, 'Org G', 'test-org-g-05');
+-- ON CONFLICT DO UPDATE: supabase/seed.sql's dev_auto_subscribe trigger already
+-- auto-subscribed org G to 'full' the instant it was created above.
 insert into platform.org_subscriptions (org_id, plan_id, status) values
-  ('a0000000-0000-0000-0000-000000000401'::uuid, 'full', 'active');
+  ('a0000000-0000-0000-0000-000000000401'::uuid, 'full', 'active')
+on conflict (org_id) do update set plan_id = excluded.plan_id, status = excluded.status;
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
 values ('b0000000-0000-0000-0000-000000000401'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'owner-g@test-05.example', 'x', null, now(), now(), '{}', '{}');
 insert into platform.org_members (org_id, user_id, role) values

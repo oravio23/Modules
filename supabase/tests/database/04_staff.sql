@@ -16,8 +16,16 @@ values
 insert into platform.org_members (org_id, user_id, role) values
   ('a0000000-0000-0000-0000-000000000301'::uuid, 'b0000000-0000-0000-0000-000000000301'::uuid, 'owner');
 
+-- supabase/seed.sql's dev_auto_platform_admin trigger (local dev only) auto-promotes the
+-- FIRST EVER auth.users row to staff whenever platform.platform_admins is empty — which,
+-- in this test's own isolated transaction, is our own "non-staff" fixture user inserted
+-- above. Explicitly clear any such accidental promotion before asserting they aren't
+-- staff, rather than relying on insertion order or transaction history to keep them clean.
+delete from platform.platform_admins where user_id = 'b0000000-0000-0000-0000-000000000301'::uuid;
+
 insert into platform.platform_admins (user_id, note) values
-  ('b0000000-0000-0000-0000-000000000302'::uuid, 'test fixture');
+  ('b0000000-0000-0000-0000-000000000302'::uuid, 'test fixture')
+on conflict (user_id) do nothing;
 
 -- ── a non-staff member sees only their own org ──────────────────────────────
 set local role authenticated;
