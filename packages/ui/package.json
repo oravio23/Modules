@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint --config ../../eslint.config.js src",
     "test": "echo \"no tests yet\" && exit 0"
   },
   "devDependencies": {

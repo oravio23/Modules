@@ -108,15 +108,20 @@ and opens the hub in your browser. Use `stop-hub.bat` to tear both down, includi
 still bound to those ports outside their windows. This is a convenience wrapper around the two
 `pnpm --filter` commands above, not a replacement for understanding what they do.
 
+**For day-to-day development**, `pnpm dev` at the repo root runs both servers in one terminal
+(via `concurrently`, output prefixed `shell`/`m5`) instead of two separate windows — more
+convenient once you're actually working in the code rather than just demoing it.
+
 ## Before opening a PR
 
 ```bash
 pnpm -r typecheck
 pnpm -r test
 pnpm -r build
+pnpm -r lint
 ```
 
-CI runs the same three commands plus the raw-hex grep gate. All four must pass.
+CI runs the same four commands plus the raw-hex grep gate. All five must pass.
 
 ## Deploy model
 
