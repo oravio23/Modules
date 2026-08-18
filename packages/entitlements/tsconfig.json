@@ -4,6 +4,7 @@
     "composite": false,
     "baseUrl": ".",
     "paths": {
+      "@/integrations/supabase/client": ["../auth/src/integrations/supabase/client"],
       "@/*": ["./src/*"]
     },
     "types": ["vite/client"]

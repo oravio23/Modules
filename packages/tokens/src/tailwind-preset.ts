@@ -78,16 +78,41 @@ export const oravioPreset = {
           field: "var(--field)",
           teal: "var(--teal)",
           "teal-dark": "var(--teal-dark)",
+          "teal-bright": "var(--teal-bright)",
           navy: "var(--navy)",
           "navy-soft": "var(--navy-soft)",
           amber: "var(--amber)",
           blue: "var(--blue)",
+          // Dark "operations portal" chrome — see tokens.css's own comment on where this
+          // applies (post-login only; landing/sign-in stay on the light tokens above).
+          "app-bg": "var(--app-bg)",
+          "app-surface": "var(--app-surface)",
+          "app-surface-2": "var(--app-surface-2)",
+          "app-line": "var(--app-line)",
+          "app-text": "var(--app-text)",
+          "app-text-muted": "var(--app-text-muted)",
+          "app-bg-translucent": "var(--app-bg-translucent)",
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "2lg": "var(--radius-lg)",
+      },
+      boxShadow: {
+        "oravio-sm": "var(--shadow-sm)",
+        "oravio-md": "var(--shadow-md)",
+        "oravio-lg": "var(--shadow-lg)",
+      },
+      transitionDuration: {
+        fast: "var(--dur-fast)",
+        base: "var(--dur-base)",
+        slow: "var(--dur-slow)",
+      },
+      transitionTimingFunction: {
+        out: "var(--ease-out)",
+        spring: "var(--ease-spring)",
       },
       maxWidth: {
         oravio: "var(--container)",
