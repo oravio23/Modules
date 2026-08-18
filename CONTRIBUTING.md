@@ -41,7 +41,7 @@ time someone else syncs and overwrites your app's copy.
 
    ```sql
    using (
-     org_id in (select org_id from platform.org_members where user_id = auth.uid())
+     org_id in (select platform.my_org_ids())
      and platform.has_module(auth.uid(), 'm<N>')
    )
    ```
