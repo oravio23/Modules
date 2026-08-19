@@ -6,3 +6,4 @@ export { AuthCallback } from "./AuthCallback";
 export { signOut } from "./signOut";
 export { useIsPlatformAdmin } from "./useIsPlatformAdmin";
 export { RequireStaff } from "./RequireStaff";
+export { goToNext, safeNextPath, isShellRoute } from "./nextTarget";

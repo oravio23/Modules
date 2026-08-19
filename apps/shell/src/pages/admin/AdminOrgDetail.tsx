@@ -313,7 +313,10 @@ export default function AdminOrgDetailPage() {
                               <TableCell key={m.module_id} className="text-center">
                                 <Checkbox
                                   checked={alwaysOn || Boolean(row?.user_granted)}
-                                  disabled={alwaysOn}
+                                  // Also disabled mid-save: each click posts the member's whole
+                                  // grant set from the last fetched matrix, so two fast clicks
+                                  // race and the second silently erases the first.
+                                  disabled={alwaysOn || setModulesMutation.isPending}
                                   onCheckedChange={(checked) => {
                                     const next = checked
                                       ? [...grantedModuleIds, m.module_id]

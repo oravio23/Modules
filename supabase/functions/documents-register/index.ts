@@ -239,7 +239,19 @@ async function handleRegister(req: Request): Promise<Response> {
       ...pipelineAuthHeaders(),
     },
     body: JSON.stringify({ jobId: job.id }),
-  }).catch((err) => console.error("Failed to invoke pipeline-worker", err));
+  })
+    // fetch() only REJECTS on a transport failure, so a 401/500/503 from pipeline-worker
+    // resolves normally and would be discarded silently — the caller already has a 200 with a
+    // jobId, and the document would sit at 'queued' forever with nothing in the logs tying it
+    // to this job. Inspect the status explicitly and log the body so a bad deploy, a wrong
+    // PIPELINE_WORKER_SECRET, or a gateway 5xx is attributable to a specific jobId.
+    .then(async (res) => {
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "<unreadable body>");
+        console.error("pipeline-worker invoke failed", { jobId: job.id, status: res.status, detail });
+      }
+    })
+    .catch((err) => console.error("Failed to invoke pipeline-worker", { jobId: job.id, err }));
   waitUntil(invokeWorker);
 
   return json({

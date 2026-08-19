@@ -11,6 +11,7 @@ import { Reveal } from "@/components/oravio/Reveal";
 import { stagger, fadeUp, useMotionSafe } from "@/components/oravio/motion";
 import { LoginCard } from "@/lib/auth/LoginCard";
 import { useSession } from "@/lib/auth/AuthProvider";
+import { safeNextPath, isShellRoute } from "@/lib/auth/nextTarget";
 import { MODULES } from "@/lib/entitlements/modules";
 
 const TRUST_STRIP = ["27+ years logistics leadership", "Lebanon, Levant, GCC", "Six modules, one platform"];
@@ -44,8 +45,14 @@ export default function LandingPage() {
   if (loading) return null;
 
   if (session) {
-    const next = params.get("next");
-    return <Navigate to={next && next.startsWith("/") ? next : "/hub"} replace />;
+    // A module deep link (/m5/...) isn't a route this router owns, so <Navigate> would land
+    // on the shell's 404 — hand those to the browser instead. See lib/auth/nextTarget.ts.
+    const target = safeNextPath(params.get("next"));
+    if (!isShellRoute(target)) {
+      window.location.assign(target);
+      return null;
+    }
+    return <Navigate to={target} replace />;
   }
 
   return (
