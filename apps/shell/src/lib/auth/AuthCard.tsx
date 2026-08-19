@@ -160,6 +160,109 @@ export function AuthCard() {
   const transition = { duration: DUR_BASE, ease: EASE_OUT };
   const busy = submitting !== "idle";
 
+  // Both tabs render this same panel — the only differences (submit label, autoComplete,
+  // whether "Forgot password?" shows) are driven by `mode`. It lives in a variable rather
+  // than inline so each TabsTrigger can point at a TabsContent that actually EXISTS: Radix
+  // wires `aria-controls` on every trigger to `content-<value>`, so a single
+  // <TabsContent value={mode}> leaves the inactive trigger referencing a missing element —
+  // which breaks assistive tech and programmatic activation (a synthetic .click() on the
+  // inactive trigger did nothing). Only the active panel is mounted, and email/password
+  // live in this component's state, so switching tabs preserves what was typed.
+  const authPanel = !magicLinkOpen ? (
+    <form onSubmit={handlePasswordSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Work email</Label>
+        <Input
+          id="email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
+          aria-invalid={error ? true : undefined}
+        />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Password</Label>
+          {mode === "sign-in" && (
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={busy}
+              className="text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              Forgot password?
+            </button>
+          )}
+        </div>
+        <Input
+          id="password"
+          type="password"
+          required
+          minLength={8}
+          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+          placeholder="At least 8 characters"
+          value={password}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+          className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
+          aria-invalid={error ? true : undefined}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={busy}>
+        {submitting === "password" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {mode === "sign-in"
+          ? submitting === "password" ? "Signing in…" : "Sign in"
+          : submitting === "password" ? "Creating account…" : "Create account"}
+      </Button>
+
+      {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+
+      <button
+        type="button"
+        onClick={() => { setMagicLinkOpen(true); setError(null); }}
+        disabled={busy}
+        className="block w-full text-center text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
+      >
+        Email me a sign-in link instead
+      </button>
+    </form>
+  ) : (
+    <form onSubmit={handleMagicLink} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="magic-email">Work email</Label>
+        <Input
+          id="magic-email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
+          aria-invalid={error ? true : undefined}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={busy}>
+        {submitting === "magic-link" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {submitting === "magic-link" ? "Sending link…" : "Send sign-in link"}
+      </Button>
+
+      {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+
+      <button
+        type="button"
+        onClick={() => { setMagicLinkOpen(false); setError(null); }}
+        disabled={busy}
+        className="block w-full text-center text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
+      >
+        Use a password instead
+      </button>
+    </form>
+  );
+
   return (
     <motion.div
       layout={motionSafe}
@@ -202,102 +305,8 @@ export function AuthCard() {
                 <TabsTrigger value="sign-up">Create account</TabsTrigger>
               </TabsList>
 
-              <TabsContent value={mode} className="mt-4">
-                {!magicLinkOpen ? (
-                  <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Work email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        required
-                        autoComplete="email"
-                        placeholder="you@company.com"
-                        value={email}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                        className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
-                        aria-invalid={error ? true : undefined}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
-                        {mode === "sign-in" && (
-                          <button
-                            type="button"
-                            onClick={handleForgotPassword}
-                            disabled={busy}
-                            className="text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
-                          >
-                            Forgot password?
-                          </button>
-                        )}
-                      </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        required
-                        minLength={8}
-                        autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-                        placeholder="At least 8 characters"
-                        value={password}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                        className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
-                        aria-invalid={error ? true : undefined}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={busy}>
-                      {submitting === "password" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {mode === "sign-in"
-                        ? submitting === "password" ? "Signing in…" : "Sign in"
-                        : submitting === "password" ? "Creating account…" : "Create account"}
-                    </Button>
-
-                    {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
-
-                    <button
-                      type="button"
-                      onClick={() => { setMagicLinkOpen(true); setError(null); }}
-                      disabled={busy}
-                      className="block w-full text-center text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
-                    >
-                      Email me a sign-in link instead
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleMagicLink} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="magic-email">Work email</Label>
-                      <Input
-                        id="magic-email"
-                        type="email"
-                        required
-                        autoComplete="email"
-                        placeholder="you@company.com"
-                        value={email}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                        className="focus-visible:ring-2 focus-visible:ring-[var(--teal)]"
-                        aria-invalid={error ? true : undefined}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={busy}>
-                      {submitting === "magic-link" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {submitting === "magic-link" ? "Sending link…" : "Send sign-in link"}
-                    </Button>
-
-                    {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
-
-                    <button
-                      type="button"
-                      onClick={() => { setMagicLinkOpen(false); setError(null); }}
-                      disabled={busy}
-                      className="block w-full text-center text-xs font-medium text-[var(--muted)] underline-offset-2 hover:underline disabled:opacity-50"
-                    >
-                      Use a password instead
-                    </button>
-                  </form>
-                )}
-              </TabsContent>
+              <TabsContent value="sign-in" className="mt-4">{authPanel}</TabsContent>
+              <TabsContent value="sign-up" className="mt-4">{authPanel}</TabsContent>
             </Tabs>
 
             {oauthEnabled && (

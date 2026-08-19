@@ -82,6 +82,18 @@ Deno.serve(async (req: Request) => {
         if (!body.orgId || !body.planId || !body.status) {
           return json({ error: "orgId, planId, and status are required" }, 400);
         }
+        // upsert REPLACES the row, so any column not named here reverts to its default.
+        // The console's plan picker sends only planId+status, so defaulting seats to 5 and
+        // current_period_end to null would silently discard a negotiated seat count and the
+        // billing period every time someone changed an org's plan. Read first, then merge:
+        // an explicit value from the caller wins, otherwise keep what's already stored.
+        const { data: existing } = await admin
+          .schema("platform")
+          .from("org_subscriptions")
+          .select("seats, current_period_end")
+          .eq("org_id", body.orgId)
+          .maybeSingle();
+
         const { data, error } = await admin
           .schema("platform")
           .from("org_subscriptions")
@@ -90,8 +102,11 @@ Deno.serve(async (req: Request) => {
               org_id: body.orgId,
               plan_id: body.planId,
               status: body.status,
-              seats: body.seats ?? 5,
-              current_period_end: body.currentPeriodEnd ?? null,
+              seats: body.seats ?? existing?.seats ?? 5,
+              current_period_end:
+                body.currentPeriodEnd !== undefined
+                  ? body.currentPeriodEnd
+                  : (existing?.current_period_end ?? null),
             },
             { onConflict: "org_id" },
           )

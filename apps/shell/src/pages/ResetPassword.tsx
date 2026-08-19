@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthPending } from "@/components/oravio/AuthPending";
 import { useSession } from "@/lib/auth/AuthProvider";
+import { goToNext } from "@/lib/auth/nextTarget";
 import { supabase } from "@/integrations/supabase/client";
 
 const TIMEOUT_MS = 8000;
@@ -52,7 +53,7 @@ export default function ResetPasswordPage() {
     }
     setDone(true);
     const next = params.get("next");
-    setTimeout(() => navigate(next && next.startsWith("/") ? next : "/hub", { replace: true }), 1200);
+    setTimeout(() => goToNext(next, navigate), 1200);
   }
 
   if (loading) return null;

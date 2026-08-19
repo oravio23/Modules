@@ -67,6 +67,7 @@ export default function OrgPage() {
   const queryClient = useQueryClient();
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [inviteRole, setInviteRole] = React.useState<MemberRole>("member");
+  const [inviteModules, setInviteModules] = React.useState<string[]>([]);
   const [inviteError, setInviteError] = React.useState<string | null>(null);
   const [inviteNotice, setInviteNotice] = React.useState<string | null>(null);
 
@@ -172,17 +173,26 @@ export default function OrgPage() {
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("org-invite", {
-        body: { action: "create", orgId, email: inviteEmail, role: inviteRole },
+        // moduleIds is what 0013's redemption applies as the invitee's starting grants.
+        // Omitting it (as this form used to) means every invited member/viewer redeems into
+        // a fully locked hub and has to be granted modules by hand afterwards.
+        body: { action: "create", orgId, email: inviteEmail, role: inviteRole, moduleIds: inviteModules },
       });
       if (error) throw error;
       return data as { emailSent: boolean; existingAccount: boolean };
     },
     onSuccess: (data) => {
       setInviteEmail("");
+      setInviteModules([]);
       setInviteNotice(
         data.existingAccount
           ? "That person already has an account — let them know directly; they'll see the invite next time they sign in."
-          : "Invite sent.",
+          : data.emailSent
+            ? "Invite sent."
+            : // org-invite returns 200 with emailSent:false when the mailer refuses (SMTP
+              // misconfigured, GoTrue error, built-in rate limit). Saying "Invite sent." there
+              // would be a lie the admin only discovers when the invitee never shows up.
+              "Invite created, but the email could not be sent. Revoke it and try again, or tell them to sign in and accept it from the hub.",
       );
       invalidateOrgData();
     },
@@ -329,7 +339,12 @@ export default function OrgPage() {
                                   <TableCell key={m.module_id} className="text-center">
                                     <Checkbox
                                       checked={alwaysOn || Boolean(row?.user_granted)}
-                                      disabled={alwaysOn}
+                                      // Also disabled while a save is in flight: every click
+                                      // sends the member's WHOLE grant set, computed from the
+                                      // last fetched matrix. Two quick clicks would race, and
+                                      // the second (built from pre-first-click data) would
+                                      // silently erase the first.
+                                      disabled={alwaysOn || setModulesMutation.isPending}
                                       onCheckedChange={(checked) =>
                                         toggleModule(userId, grantedModuleIds, m.module_id, checked === true)
                                       }
@@ -396,6 +411,32 @@ export default function OrgPage() {
                     {inviteMutation.isPending ? "Sending…" : "Send invite"}
                   </Button>
                 </form>
+
+                {/* Starting modules. Owners and admins auto-get everything the org is entitled
+                    to (platform.has_module), so this only matters for member/viewer invites. */}
+                {entitledModules.length > 0 && inviteRole !== "admin" && (
+                  <div className="space-y-2">
+                    <Label>Modules they start with</Label>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2">
+                      {entitledModules.map((m) => (
+                        <label key={m.module_id} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={inviteModules.includes(m.module_id)}
+                            disabled={inviteMutation.isPending}
+                            onCheckedChange={(checked) =>
+                              setInviteModules((prev) =>
+                                checked === true
+                                  ? [...prev, m.module_id]
+                                  : prev.filter((id) => id !== m.module_id),
+                              )
+                            }
+                          />
+                          <span className="text-[var(--app-text-muted)]">{m.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {inviteError && <p className="text-sm text-[var(--destructive)]">{inviteError}</p>}
                 {inviteNotice && <p className="text-sm text-[var(--app-text-muted)]">{inviteNotice}</p>}
 

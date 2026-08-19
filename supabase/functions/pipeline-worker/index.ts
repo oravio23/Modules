@@ -22,17 +22,34 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
 }
 
-async function reinvokeSelf(jobId: string) {
+/**
+ * Hands the rest of a long job to a fresh isolate before this one hits the wall clock.
+ * Returns whether the handoff was actually accepted: fetch() resolves for a 401/500 just as
+ * happily as for a 200, so a swallowed non-2xx here used to strand the job at state 'running'
+ * with nothing left to advance it and no failure recorded for the UI to show.
+ */
+async function reinvokeSelf(jobId: string): Promise<boolean> {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/pipeline-worker`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-      ...pipelineAuthHeaders(),
-    },
-    body: JSON.stringify({ jobId }),
-  }).catch((err) => console.error("pipeline-worker self-invoke failed", err));
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        ...pipelineAuthHeaders(),
+      },
+      body: JSON.stringify({ jobId }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "<unreadable body>");
+      console.error("pipeline-worker self-invoke rejected", { jobId, status: res.status, detail });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("pipeline-worker self-invoke failed", { jobId, err });
+    return false;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -123,7 +140,13 @@ Deno.serve(async (req: Request) => {
         await admin.schema("m5").from("jobs").update({ progress_current: (job.progress_current ?? 0) + results.length }).eq("id", jobId);
 
         if (Date.now() - startedAt > TIME_BUDGET_MS && pending.length > batch.length) {
-          await reinvokeSelf(jobId);
+          // If nothing picked up the baton, fail the job here rather than reporting ok:true
+          // and leaving it 'running' forever — there is no reaper to clean that up, and
+          // useJobProgress has no timeout, so the user's page would spin indefinitely.
+          if (!(await reinvokeSelf(jobId))) {
+            await markFailed(job.document_id, "Pipeline handoff failed — could not continue transcription.");
+            return json({ ok: false, stage: "transcribe", state: "failed", reason: "handoff_failed" }, 500);
+          }
           return json({ ok: true, stage: "transcribe", state: "continuing", remaining: pending.length - batch.length });
         }
         continue;

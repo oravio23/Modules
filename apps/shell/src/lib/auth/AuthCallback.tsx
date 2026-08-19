@@ -2,6 +2,7 @@ import * as React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthPending } from "@/components/oravio/AuthPending";
 import { useSession } from "./AuthProvider";
+import { goToNext } from "./nextTarget";
 
 const TIMEOUT_MS = 8000;
 
@@ -25,8 +26,9 @@ export function AuthCallback() {
 
   React.useEffect(() => {
     if (loading || !session) return;
-    const next = params.get("next");
-    navigate(next && next.startsWith("/") ? next : "/hub", { replace: true });
+    // goToNext, not navigate(): `next` is usually a module path like /m5/... which this
+    // router does not own — see nextTarget.ts.
+    goToNext(params.get("next"), navigate);
   }, [session, loading, navigate, params]);
 
   if (timedOut && !session) {

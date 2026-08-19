@@ -1,7 +1,12 @@
--- M5 role enforcement (0014_m5_role_enforcement.sql) — see README.md for conventions.
+-- M5 role enforcement (0014 + 0015) — see supabase/tests/database/README.md for conventions.
+--
+-- 0014 originally guarded only UPDATE on m5.documents and review_state transitions on
+-- m5.extractions. 0015 closed the rest: DELETE on documents, all writes to field_results,
+-- any browser edit of extractions.envelope, and the storage bucket's write paths. The
+-- assertions below cover each of those, so a future change that re-opens one fails here.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(5);
+select plan(10);
 
 -- ── fixtures ──────────────────────────────────────────────────────────────────
 insert into platform.orgs (id, name, slug) values
@@ -38,6 +43,11 @@ values (
   'd0000000-0000-0000-0000-000000000501'::uuid, 'c0000000-0000-0000-0000-000000000501'::uuid,
   'generic', '0.1', '{}'::jsonb, 'pending'
 );
+insert into m5.field_results (id, extraction_id, field_path, field_label, value, status)
+values (
+  'e0000000-0000-0000-0000-000000000501'::uuid, 'd0000000-0000-0000-0000-000000000501'::uuid,
+  'grand_total', 'Grand total', '"100.00"'::jsonb, 'extracted'::m5.field_status
+);
 
 -- ── a plain member can review (product behaviour: any non-viewer reviews) ───────────────────
 set local role authenticated;
@@ -51,6 +61,21 @@ select lives_ok(
   $$ update m5.documents set status = 'reviewed' where id = 'c0000000-0000-0000-0000-000000000501'::uuid $$,
   'a plain member can mark a pending_review document reviewed'
 );
+select lives_ok(
+  $$ update m5.field_results set human_value = '"120.00"'::jsonb, human_action = 'edited'
+      where id = 'e0000000-0000-0000-0000-000000000501'::uuid $$,
+  'a plain member can record a human review edit on a field_result'
+);
+
+-- ── nobody can rewrite the extraction envelope from the browser (0015) ──────────────────────
+-- The envelope is pipeline output and the exact bytes export-result serves back; letting a
+-- client PATCH it would make "approved" meaningless.
+select throws_like(
+  $$ update m5.extractions set envelope = '{"tampered":true}'::jsonb
+      where id = 'd0000000-0000-0000-0000-000000000501'::uuid $$,
+  '%envelope is pipeline output%',
+  'even a member cannot edit extractions.envelope from the browser'
+);
 
 reset role;
 reset "request.jwt.claims";
@@ -59,17 +84,33 @@ reset "request.jwt.claims";
 update m5.extractions set review_state = 'pending' where id = 'd0000000-0000-0000-0000-000000000501'::uuid;
 update m5.documents set status = 'pending_review' where id = 'c0000000-0000-0000-0000-000000000501'::uuid;
 
--- ── a viewer cannot review, matching the role's read-only name ──────────────────────────────
+-- ── a viewer cannot write anything in m5, matching the role's read-only name ────────────────
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub":"b0000000-0000-0000-0000-000000000503","role":"authenticated"}';
 
 select throws_like(
   $$ update m5.extractions set review_state = 'approved' where id = 'd0000000-0000-0000-0000-000000000501'::uuid $$,
-  '%not a viewer%',
+  '%Viewers cannot modify M5 data%',
   'a viewer cannot approve an extraction'
 );
+select throws_like(
+  $$ update m5.documents set status = 'reviewed' where id = 'c0000000-0000-0000-0000-000000000501'::uuid $$,
+  '%Viewers cannot modify M5 data%',
+  'a viewer cannot mark a document reviewed'
+);
+select throws_like(
+  $$ delete from m5.documents where id = 'c0000000-0000-0000-0000-000000000501'::uuid $$,
+  '%Viewers cannot modify M5 data%',
+  'a viewer cannot DELETE a document (which would cascade away its parts, jobs and extractions)'
+);
+select throws_like(
+  $$ update m5.field_results set human_value = '"999.00"'::jsonb
+      where id = 'e0000000-0000-0000-0000-000000000501'::uuid $$,
+  '%Viewers cannot modify M5 data%',
+  'a viewer cannot edit a field_result'
+);
 
--- ── neither role can rewrite pipeline-owned columns from the browser ────────────────────────
+-- ── pipeline-owned columns stay closed to every browser client ──────────────────────────────
 reset role;
 reset "request.jwt.claims";
 set local role authenticated;
